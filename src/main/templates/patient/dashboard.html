@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>SmartClinic — Patient Dashboard</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; margin: 0; }
+        .topbar { background: #1f2937; color: white; padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .topbar a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
+        .topbar a:hover { text-decoration: underline; }
+        .container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; color: #111827; margin-bottom: 1rem; }
+        .section { background: white; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .section h2 { font-size: 1.1rem; margin-top: 0; color: #374151; }
+        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+        th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #e5e7eb; }
+        th { font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
+        tr:hover { background: #f9fafb; }
+        .status-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-scheduled { background: #dbeafe; color: #1e40af; }
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        .status-no-show { background: #fef3c7; color: #92400e; }
+        .current-badge { background: #2563eb; color: white; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.5rem; }
+        .empty { color: #6b7280; font-style: italic; }
+        .card { border-left: 4px solid #2563eb; padding: 1rem; background: #f8fafc; margin-bottom: 0.75rem; }
+        .card:not(.current) { opacity: 0.8; border-left-color: #9ca3af; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div>SmartClinic · Patient Dashboard</div>
+    <div>
+        <span>Logged in as <b th:text="${username}"></b></span>
+        <a href="/perform-logout">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+    <h1>My Records</h1>
+
+    <div class="section">
+        <h2>My Appointments</h2>
+        <table>
+            <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Status</th></tr></thead>
+            <tbody>
+            <tr th:each="a : ${appointments}">
+                <td th:text="${a.appointmentDate}"></td>
+                <td th:text="${a.appointmentTime}"></td>
+                <td th:text="${a.doctorName}"></td>
+                <td>
+                    <span class="status-badge" th:class="|status-${a.status.toLowerCase()}|" th:text="${a.status}"></span>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(appointments)}"><td colspan="4" class="empty">No appointments found.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>My Prescriptions</h2>
+        <div th:each="prescription, iter : ${prescriptions}">
+            <div class="card" th:class="${iter.index == 0} ? 'card current' : ''">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                    <strong th:text="${prescription.diagnosis}"></strong>
+                    <span th:if="${iter.index == 0}" class="current-badge">Current</span>
+                    <small th:text="${prescription.createdAt}"></small>
+                </div>
+                <p th:text="${prescription.note}" th:if="${prescription.note}" style="margin:0.4rem 0; color:#4b5563;"></p>
+                <ul style="margin:0.4rem 0 0 1.2rem; padding:0; color:#374151;">
+                    <li th:each="med : ${prescription.medicines}">
+                        <strong th:text="${med.name}"></strong> — <em th:text="${med.dosage}"></em> <span th:text="${med.duration}"></span>
+                    </li>
+                    <li th:if="${#lists.isEmpty(prescription.medicines)}" class="empty">No medicines recorded.</li>
+                </ul>
+            </div>
+        </div>
+        <div th:if="${#lists.isEmpty(prescriptions)}" class="empty">No prescriptions found.</div>
+    </div>
+</div>
+</body>
+</html>
