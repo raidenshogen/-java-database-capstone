@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,7 +43,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     Optional<Appointment> findScheduledByDoctorAndDateTime(
             @Param("doctorId") Long doctorId,
             @Param("appointmentDate") LocalDate appointmentDate,
-            @Param("appointmentTime") LocalDateTime appointmentTime,
+            @Param("appointmentTime") LocalTime appointmentTime,
             @Param("status") AppointmentStatus status);
 
     List<Appointment> findByPatientIdAndStatus(Long patientId, AppointmentStatus status);

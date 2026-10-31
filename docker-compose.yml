@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # MySQL database for structured data (Admin, Doctor, Patient, Appointment)
+  mysql:
+    image: mysql:8.0
+    container_name: smartclinic-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: smartclinic
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: smartclinic
+      MYSQL_PASSWORD: smartclinicpass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+
+  # MongoDB database for prescriptions (document-based data)
+  mongo:
+    image: mongo:7
+    container_name: smartclinic-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: smartclinic
+      MONGO_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Spring Boot application
+  app:
+    image: smartclinic-app:latest
+    container_name: smartclinic-app
+    restart: unless-stopped
+      
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:
+  mongo_data:

@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * Response DTO for exposing an Appointment to the client.
@@ -23,6 +23,6 @@ public class AppointmentResponse {
     private Long doctorId;
     private String doctorName;
     private LocalDate appointmentDate;
-    private LocalDateTime appointmentTime;
+    private LocalTime appointmentTime;
     private String status;
 }

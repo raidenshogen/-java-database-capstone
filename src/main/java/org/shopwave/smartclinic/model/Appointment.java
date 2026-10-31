@@ -61,13 +61,13 @@ public class Appointment {
     private Doctor doctor;
 
     @NotNull
+    @FutureOrPresent(message = "Appointment date must be in the present or future")
     @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;
 
     @NotNull
-    @FutureOrPresent(message = "Appointment time must be in the present or future")
     @Column(name = "appointment_time", nullable = false)
-    private LocalDateTime appointmentTime;
+    private LocalTime appointmentTime;
 
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -89,9 +89,9 @@ public class Appointment {
      * Computed as {@code appointmentTime} plus the doctor's {@code slotDurationMinutes}.
      * Returns {@code appointmentTime} plus a 30-minute default if the doctor is not loaded.
      *
-     * @return the end time as a {@link LocalDateTime}, never null
+     * @return the end time as a {@link LocalTime}, never null
      */
-    public LocalDateTime getEndTime() {
+    public LocalTime getEndTime() {
         int slotMinutes = (doctor != null && doctor.getSlotDurationMinutes() != null)
                 ? doctor.getSlotDurationMinutes()
                 : 30;

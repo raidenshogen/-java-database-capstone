@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * Request DTO for creating an {@link org.shopwave.smartclinic.model.Appointment}.
@@ -25,5 +25,5 @@ public class AppointmentRequest {
     private LocalDate appointmentDate;
 
     @NotNull(message = "appointment time is required")
-    private LocalDateTime appointmentTime;
+    private LocalTime appointmentTime;
 }
