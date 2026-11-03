@@ -18,7 +18,9 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
 
     List<Doctor> findByIsActiveTrue();
 
-    List<Doctor> findBySpecialtyIdAndIsActiveTrue(Integer specialtyId);
+    List<Doctor> findBySpecialtyIdAndIsActiveTrue(Long specialtyId);
+
+    Optional<Doctor> findFirstBySpecialtyIdAndIsActiveTrueOrderByIdAsc(Long specialtyId);
 
     boolean existsByEmail(String email);
 

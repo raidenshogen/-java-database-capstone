@@ -8,6 +8,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 /**
  * Spring Security configuration.
@@ -44,16 +47,21 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        CsrfTokenRequestAttributeHandler csrfRequestHandler = new CsrfTokenRequestAttributeHandler();
+        csrfRequestHandler.setCsrfRequestAttributeName(null);
+
         http
             .authenticationProvider(authenticationProvider())
+            .addFilterBefore(new LoginRateLimitingFilter(),
+                    UsernamePasswordAuthenticationFilter.class)
 
             // Authorize requests
             .authorizeHttpRequests(auth -> auth
                 // Public: login, error, static resources
                 .requestMatchers(
-                    "/login", "/login-error",
-                    "/css/**", "/js/**", "/images/**",
-                    "/api/public/**"
+                    "/login", "/signup", "/forgot-password", "/reset-password", "/login-error",
+                    "/css/**", "/js/**", "/images/**", "/clinic.css", "/clinic.js",
+                    "/api/public/**", "/api/auth/forgot-password", "/api/auth/reset-password"
                 ).permitAll()
 
                 // Admin only
@@ -95,9 +103,10 @@ public class SecurityConfig {
 
             // CSRF: disable for stateless API, enable for form login
             .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**")
-                .ignoringRequestMatchers("/perform-login", "/perform-logout")
-            );
+               .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+               .csrfTokenRequestHandler(csrfRequestHandler)
+               .ignoringRequestMatchers("/perform-login", "/perform-logout")
+             );
 
         return http.build();
     }

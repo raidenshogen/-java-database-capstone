@@ -9,6 +9,7 @@ import org.shopwave.smartclinic.dto.DoctorRequest;
 import org.shopwave.smartclinic.model.Doctor;
 import org.shopwave.smartclinic.repository.DoctorRepository;
 import org.shopwave.smartclinic.repository.SpecialtyRepository;
+import org.shopwave.smartclinic.service.doctor.DoctorService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;

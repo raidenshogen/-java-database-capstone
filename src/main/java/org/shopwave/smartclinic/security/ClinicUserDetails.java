@@ -22,14 +22,16 @@ public class ClinicUserDetails implements UserDetails {
 
     private final Long id;
     private final String username;
+    private final String displayName;
     private final String password;
     private final UserRole role;
     private final boolean active;
 
-    public ClinicUserDetails(Long id, String username, String password,
+    public ClinicUserDetails(Long id, String username, String displayName, String password,
                              UserRole role, boolean active) {
         this.id = id;
         this.username = username;
+        this.displayName = displayName;
         this.password = password;
         this.role = role;
         this.active = active;
@@ -41,6 +43,10 @@ public class ClinicUserDetails implements UserDetails {
 
     public UserRole getRole() {
         return role;
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 
     @Override
@@ -80,14 +86,14 @@ public class ClinicUserDetails implements UserDetails {
 
     public static ClinicUserDetails fromAdmin(Admin admin) {
         return new ClinicUserDetails(
-                admin.getId(), admin.getUsername(), admin.getPasswordHash(),
+                admin.getId(), admin.getUsername(), admin.getUsername(), admin.getPasswordHash(),
                 UserRole.ROLE_ADMIN, true);
     }
 
     /** Wraps a {@link Doctor} entity. */
     public static ClinicUserDetails fromDoctor(Doctor doctor) {
         return new ClinicUserDetails(
-                doctor.getId(), doctor.getEmail(), doctor.getPasswordHash(),
+                doctor.getId(), doctor.getEmail(), doctor.getName(), doctor.getPasswordHash(),
                 UserRole.ROLE_DOCTOR,
                 doctor.getIsActive() != null && doctor.getIsActive());
     }
@@ -95,7 +101,7 @@ public class ClinicUserDetails implements UserDetails {
     /** Wraps a {@link Patient} entity. */
     public static ClinicUserDetails fromPatient(Patient patient) {
         return new ClinicUserDetails(
-                patient.getId(), patient.getEmail(), patient.getPasswordHash(),
+                patient.getId(), patient.getEmail(), patient.getName(), patient.getPasswordHash(),
                 UserRole.ROLE_PATIENT,
                 patient.getIsActive() != null && patient.getIsActive());
     }

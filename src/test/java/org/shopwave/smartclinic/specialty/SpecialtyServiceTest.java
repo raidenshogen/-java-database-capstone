@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.shopwave.smartclinic.dto.SpecialtyRequest;
 import org.shopwave.smartclinic.model.Specialty;
 import org.shopwave.smartclinic.repository.SpecialtyRepository;
+import org.shopwave.smartclinic.service.specialty.SpecialtyService;
 
 import java.util.Optional;
 

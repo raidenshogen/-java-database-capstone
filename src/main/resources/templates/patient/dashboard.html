@@ -1,82 +1,200 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8"/>
-    <title>SmartClinic — Patient Dashboard</title>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; margin: 0; }
-        .topbar { background: #1f2937; color: white; padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-        .topbar a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
-        .topbar a:hover { text-decoration: underline; }
-        .container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; color: #111827; margin-bottom: 1rem; }
-        .section { background: white; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section h2 { font-size: 1.1rem; margin-top: 0; color: #374151; }
-        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
-        th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #e5e7eb; }
-        th { font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
-        tr:hover { background: #f9fafb; }
-        .status-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-scheduled { background: #dbeafe; color: #1e40af; }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-cancelled { background: #fee2e2; color: #991b1b; }
-        .status-no-show { background: #fef3c7; color: #92400e; }
-        .current-badge { background: #2563eb; color: white; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.5rem; }
-        .empty { color: #6b7280; font-style: italic; }
-        .card { border-left: 4px solid #2563eb; padding: 1rem; background: #f8fafc; margin-bottom: 0.75rem; }
-        .card:not(.current) { opacity: 0.8; border-left-color: #9ca3af; }
-    </style>
-</head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Patient workspace')}"></head>
 <body>
-<div class="topbar">
-    <div>SmartClinic · Patient Dashboard</div>
+<svg th:replace="~{fragments :: icons}"></svg>
+<header th:replace="~{fragments :: topbar('Patient')}"></header>
+
+<main class="container">
+  <section class="hero reveal">
     <div>
-        <span>Logged in as <b th:text="${username}"></b></span>
-        <a href="/perform-logout">Logout</a>
+      <div class="eyebrow"><i class="live-dot"></i>Your care</div>
+      <h1>Plan your next visit</h1>
+      <p class="lede">Choose a specialty, see live availability, and keep your appointments and prescriptions together.</p>
+      <div class="hero-actions"><a class="btn btn-light" href="#booking-card"><svg class="i"><use href="#i-calendar"/></svg>Book an appointment</a></div>
     </div>
-</div>
+    <div class="hero-card"><div class="k">Next visit</div><strong id="next-title">—</strong><span id="next-sub"></span></div>
+    <svg th:replace="~{fragments :: ecg}"></svg>
+  </section>
 
-<div class="container">
-    <h1>My Records</h1>
-
-    <div class="section">
-        <h2>My Appointments</h2>
-        <table>
-            <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Status</th></tr></thead>
-            <tbody>
-            <tr th:each="a : ${appointments}">
-                <td th:text="${a.appointmentDate}"></td>
-                <td th:text="${a.appointmentTime}"></td>
-                <td th:text="${a.doctorName}"></td>
-                <td>
-                    <span class="status-badge" th:class="|status-${a.status.toLowerCase()}|" th:text="${a.status}"></span>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(appointments)}"><td colspan="4" class="empty">No appointments found.</td></tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="section">
-        <h2>My Prescriptions</h2>
-        <div th:each="prescription, iter : ${prescriptions}">
-            <div class="card" th:class="${iter.index == 0} ? 'card current' : ''">
-                <div style="display:flex;justify-content:space-between;align-items:baseline;">
-                    <strong th:text="${prescription.diagnosis}"></strong>
-                    <span th:if="${iter.index == 0}" class="current-badge">Current</span>
-                    <small th:text="${prescription.createdAt}"></small>
-                </div>
-                <p th:text="${prescription.note}" th:if="${prescription.note}" style="margin:0.4rem 0; color:#4b5563;"></p>
-                <ul style="margin:0.4rem 0 0 1.2rem; padding:0; color:#374151;">
-                    <li th:each="med : ${prescription.medicines}">
-                        <strong th:text="${med.name}"></strong> — <em th:text="${med.dosage}"></em> <span th:text="${med.duration}"></span>
-                    </li>
-                    <li th:if="${#lists.isEmpty(prescription.medicines)}" class="empty">No medicines recorded.</li>
-                </ul>
-            </div>
+  <div class="grid grid-main rev">
+    <!-- Booking wizard -->
+    <section class="card reveal" id="booking-card">
+      <div class="card-head"><div class="card-title"><span class="icon-badge"><svg class="i"><use href="#i-calendar"/></svg></span>
+        <div><h2>Book an appointment</h2><p>Choose a specialty, doctor, date, and available time.</p></div></div></div>
+      <ol class="steps" id="steps" aria-hidden="true">
+        <li data-label="Specialty"></li><li data-label="Doctor"></li><li data-label="Date"></li><li data-label="Time"></li>
+      </ol>
+      <form id="booking-form" class="stack">
+        <label>Specialty
+          <select id="specialty" required><option value="">Choose a specialty</option>
+            <option th:each="s : ${specialties}" th:value="${s.id}" th:text="${s.name}"></option></select></label>
+        <label>Doctor<select id="doctor" required disabled><option value="">Choose a specialty first</option></select></label>
+        <label>Date<input id="appointment-date" type="date" required></label>
+        <div>
+          <div class="slots-label">Available time</div>
+          <div id="slots" class="slots"><p class="slots-hint">Choose a doctor and date to see open times.</p></div>
+          <input id="appointment-time" type="hidden">
         </div>
-        <div th:if="${#lists.isEmpty(prescriptions)}" class="empty">No prescriptions found.</div>
+        <p class="muted small">The selected doctor must have an open slot and fewer than 10 scheduled appointments that day.</p>
+        <button class="btn btn-primary btn-block" type="submit"><svg class="i"><use href="#i-check"/></svg>Book appointment</button>
+        <div id="booking-message" class="hidden"></div>
+      </form>
+    </section>
+
+    <!-- History -->
+    <section class="card reveal">
+      <div class="card-head">
+        <div class="card-title"><span class="icon-badge is-blue"><svg class="i"><use href="#i-clock"/></svg></span>
+          <div><h2>Appointment history</h2><p>Filter by status or sort by date.</p></div></div>
+        <select id="sort-order" style="width:auto" aria-label="Sort order"><option value="asc">Soonest first</option><option value="desc">Latest first</option></select>
+      </div>
+      <div class="chips" id="status-chips" style="margin-bottom:1rem">
+        <button type="button" class="chip active" data-status="">All</button>
+        <button type="button" class="chip" data-status="SCHEDULED">Scheduled</button>
+        <button type="button" class="chip" data-status="COMPLETED">Completed</button>
+        <button type="button" class="chip" data-status="CANCELLED">Cancelled</button>
+        <button type="button" class="chip" data-status="NO_SHOW">No-show</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Status</th><th></th></tr></thead>
+          <tbody id="appointment-body">
+            <tr th:each="a : ${appointments}" th:data-status="${a.status}" th:data-date="${a.appointmentDate + 'T' + a.appointmentTime}">
+              <td><strong th:text="${a.appointmentDate}"></strong></td>
+              <td th:text="${a.appointmentTime}"></td>
+              <td th:text="${a.doctorName}"></td>
+              <td><span class="badge" th:classappend="'status-' + ${a.status.toLowerCase().replace('_','-')}"><i class="dot"></i><span th:text="${a.status}"></span></span></td>
+              <td><button type="button" class="btn btn-sm btn-danger" th:if="${a.status == 'SCHEDULED'}" th:data-id="${a.id}" data-action="cancel-appt"><svg class="i"><use href="#i-x"/></svg>Cancel</button></td>
+            </tr>
+            <tr class="empty-row" th:if="${#lists.isEmpty(appointments)}"><td colspan="5" class="empty">No appointments yet.</td></tr>
+            <tr id="no-match" class="hidden"><td colspan="5" class="empty">No appointments match this filter.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Prescriptions -->
+  <section class="card reveal">
+    <div class="card-head"><div class="card-title"><span class="icon-badge"><svg class="i"><use href="#i-pill"/></svg></span>
+      <div><h2>Prescription history</h2><p>Your most recent prescription is marked current.</p></div></div></div>
+    <div class="grid grid-2" style="margin:0">
+      <div th:each="prescription, iter : ${prescriptions}" class="mini rx" th:classappend="${iter.index > 0} ? 'muted-surface' : ''" th:style="'--i:' + ${iter.index}" style="padding:1rem">
+        <div class="mini-head">
+          <strong th:text="${prescription.diagnosis}"></strong>
+          <span class="badge badge-current" th:if="${iter.index == 0}"><i class="dot"></i>Current</span>
+        </div>
+        <p class="muted small" data-fmt-datetime th:text="${prescription.createdAt}"></p>
+        <p style="margin-top:.4rem" th:text="${prescription.note}" th:if="${prescription.note}"></p>
+        <ul class="pills"><li class="pill" th:each="med : ${prescription.medicines}"
+            th:text="${med.name + ' · ' + med.dosage + (med.duration != null ? ' · ' + med.duration : '')}"></li></ul>
+      </div>
     </div>
-</div>
+    <div th:if="${#lists.isEmpty(prescriptions)}" class="empty-state">
+      <span class="icon-badge"><svg class="i"><use href="#i-file"/></svg></span><strong>No prescriptions yet</strong><span>They will appear here after your visits.</span>
+    </div>
+  </section>
+
+</main>
+
+<script src="/clinic.js"></script>
+<script th:inline="javascript">window.PAGE = { patientId: /*[[${patientId}]]*/ 0 };</script>
+<script>
+const patientId = PAGE.patientId;
+const bk = { specialty: qs("#specialty"), doctor: qs("#doctor"), date: qs("#appointment-date"), time: qs("#appointment-time"), slots: qs("#slots") };
+bk.date.min = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
+/* ---- Booking wizard ---- */
+function updateSteps() {
+  const done = [!!bk.specialty.value, !!bk.doctor.value && !bk.doctor.disabled, !!bk.date.value, !!bk.time.value];
+  qsa("#steps li").forEach((li, i) => { li.classList.toggle("done", done[i]); li.classList.toggle("current", !done[i] && done.slice(0, i).every(Boolean)); });
+}
+function resetSlots(text = "Choose a doctor and date to see open times.") {
+  bk.time.value = ""; bk.slots.innerHTML = `<p class="slots-hint">${esc(text)}</p>`; updateSteps();
+}
+async function loadDoctors() {
+  bk.doctor.disabled = true; resetSlots();
+  if (!bk.specialty.value) { bk.doctor.innerHTML = '<option value="">Choose a specialty first</option>'; return updateSteps(); }
+  bk.doctor.innerHTML = '<option value="">Loading doctors…</option>';
+  try {
+    const doctors = await api(`/api/doctors/specialty/${bk.specialty.value}`);
+    bk.doctor.innerHTML = doctors.length ? '<option value="">Choose a doctor</option>' + doctors.map(d => `<option value="${d.id}">${esc(d.firstName)} ${esc(d.lastName)}</option>`).join("") : '<option value="">No active doctors for this specialty</option>';
+    bk.doctor.disabled = !doctors.length;
+  } catch (e) { bk.doctor.innerHTML = `<option value="">${esc(e.message)}</option>`; }
+  updateSteps();
+}
+async function loadTimes() {
+  bk.time.value = "";
+  if (!bk.doctor.value || !bk.date.value) { resetSlots(); return; }
+  bk.slots.innerHTML = Array.from({ length: 8 }, () => '<span class="skeleton slot-sk"></span>').join("");
+  try {
+    const data = await api(`/api/doctors/${bk.doctor.value}/availability?date=${bk.date.value}`);
+    bk.slots.innerHTML = data.availableSlots.length
+      ? data.availableSlots.map((s, i) => `<button type="button" class="slot anim-in" style="--i:${Math.min(i, 14)}" data-time="${esc(s)}">${esc(String(s).slice(0, 5))}</button>`).join("")
+      : '<p class="slots-hint">The doctor has no open slots on this date. Try another day.</p>';
+  } catch (e) { bk.slots.innerHTML = `<p class="slots-hint is-error">${esc(e.message)}</p>`; }
+  updateSteps();
+}
+bk.specialty.addEventListener("change", loadDoctors);
+bk.doctor.addEventListener("change", loadTimes);
+bk.date.addEventListener("change", () => { updateSteps(); loadTimes(); });
+bk.slots.addEventListener("click", e => {
+  const s = e.target.closest(".slot"); if (!s) return;
+  qsa(".slot", bk.slots).forEach(x => x.classList.toggle("selected", x === s));
+  bk.time.value = s.dataset.time; updateSteps();
+});
+qs("#booking-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = qs("#booking-message"), btn = qs("[type=submit]", e.target);
+  if (!bk.time.value) { showMessage(msg, "Please choose an available time slot.", "error"); return; }
+  setBusy(btn, true); hideMessage(msg);
+  try {
+    await api("/api/appointments", { method: "POST", body: JSON.stringify({ patientId, specialtyId: Number(bk.specialty.value), doctorId: Number(bk.doctor.value), appointmentDate: bk.date.value, appointmentTime: bk.time.value }) });
+    toast("Appointment booked. See you soon!"); reloadSoon();
+  } catch (err) { showMessage(msg, err.message, "error"); setBusy(btn, false); }
+});
+
+/* ---- History filter / sort ---- */
+let statusFilter = "";
+function filterAppointments() {
+  const dir = qs("#sort-order").value, body = qs("#appointment-body");
+  const all = qsa("tr[data-status]", body);
+  const rows = all.slice().sort((a, b) => dir === "asc"
+    ? a.dataset.date.localeCompare(b.dataset.date)
+    : b.dataset.date.localeCompare(a.dataset.date));
+  rows.forEach((row, i) => {
+    row.style.setProperty("--i", Math.min(i, 12));
+    row.classList.toggle("hidden", Boolean(statusFilter) && row.dataset.status !== statusFilter);
+    body.insertBefore(row, qs("#no-match"));
+  });
+  const visibleCount = all.filter(row => !row.classList.contains("hidden")).length;
+  qs("#no-match").classList.toggle("hidden", visibleCount > 0 || all.length === 0);
+}
+qs("#status-chips").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  statusFilter = c.dataset.status;
+  qsa("#status-chips .chip").forEach(x => x.classList.toggle("active", x === c));
+  filterAppointments();
+});
+qs("#sort-order").addEventListener("change", filterAppointments);
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest('[data-action="cancel-appt"]'); if (!b) return;
+  if (!await confirmAction("The time slot will be released for other patients.", { title: "Cancel this appointment?", confirmLabel: "Cancel appointment", cancelLabel: "Keep it", danger: true })) return;
+  try { await api(`/api/appointments/${b.dataset.id}/cancel?cancelledBy=patient`, { method: "PUT" }); toast("Appointment cancelled."); reloadSoon(); }
+  catch (err) { toast(err.message, "error"); }
+});
+
+/* ---- Next visit (hero) ---- */
+function showNextVisit() {
+  const next = qsa("tr[data-status=SCHEDULED]").map(r => ({ r, d: new Date(r.dataset.date) })).filter(x => x.d >= new Date()).sort((a, b) => a.d - b.d)[0];
+  if (!next) { qs("#next-title").textContent = "Nothing scheduled"; qs("#next-sub").textContent = "Book a visit whenever you're ready."; return; }
+  qs("#next-title").textContent = next.d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" }) + " · " + next.d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  qs("#next-sub").textContent = "with " + next.r.cells[2].textContent.trim();
+}
+
+updateSteps(); filterAppointments(); showNextVisit();
+</script>
 </body>
 </html>

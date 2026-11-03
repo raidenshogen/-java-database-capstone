@@ -28,7 +28,6 @@ public class DoctorRequest {
     @Email(message = "email must be valid")
     private String email;
 
-    @NotBlank(message = "password is required")
     private String password;
 
     @NotNull(message = "specialty is required")

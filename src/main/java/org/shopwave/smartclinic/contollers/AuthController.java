@@ -1,10 +1,10 @@
 package org.shopwave.smartclinic.contollers;
 
-import org.shopwave.smartclinic.auth.PasswordResetService;
 import org.shopwave.smartclinic.dto.PasswordChangeRequest;
-import org.shopwave.smartclinic.doctor.DoctorService;
-import org.shopwave.smartclinic.patient.PatientService;
 import org.shopwave.smartclinic.security.ClinicUserDetails;
+import org.shopwave.smartclinic.service.auth.PasswordResetService;
+import org.shopwave.smartclinic.service.doctor.DoctorService;
+import org.shopwave.smartclinic.service.patient.PatientService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -56,6 +57,23 @@ public class AuthController {
             model.addAttribute("message", "You have been logged out successfully");
         }
         return "login";
+    }
+
+    @GetMapping("/signup")
+    public String signup() {
+        return "signup";
+    }
+
+    @GetMapping("/forgot-password")
+    public String forgotPasswordPage() {
+        return "forgot-password";
+    }
+
+    @GetMapping("/reset-password")
+    public String resetPasswordPage(@RequestParam(value = "token", required = false) String token,
+                                    Model model) {
+        model.addAttribute("token", token == null ? "" : token);
+        return "reset-password";
     }
 
     @GetMapping("/role-redirect")
@@ -107,6 +125,9 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", ex.getMessage()));
         }
     }
 

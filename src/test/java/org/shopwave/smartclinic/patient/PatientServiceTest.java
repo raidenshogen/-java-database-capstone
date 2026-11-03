@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.shopwave.smartclinic.dto.PatientRequest;
 import org.shopwave.smartclinic.model.Patient;
 import org.shopwave.smartclinic.repository.PatientRepository;
+import org.shopwave.smartclinic.service.patient.PatientService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;

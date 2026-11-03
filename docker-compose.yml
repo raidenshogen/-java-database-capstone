@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MySQL database for structured data (Admin, Doctor, Patient, Appointment)
   mysql:
@@ -8,9 +6,9 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: smartclinic
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       MYSQL_USER: smartclinic
-      MYSQL_PASSWORD: smartclinicpass
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     ports:
       - "3307:3306"
     volumes:
@@ -18,6 +16,11 @@ services:
     command:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   # MongoDB database for prescriptions (document-based data)
   mongo:
@@ -26,22 +29,51 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: smartclinic
-      MONGO_ROOT_PASSWORD: rootpassword
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   # Spring Boot application
   app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: smartclinic-app:latest
     container_name: smartclinic-app
     restart: unless-stopped
-      
+    env_file:
+      - .env
+    command:
+      - java
+      - -jar
+      - app.jar
+      - --spring.datasource.url=jdbc:mysql://mysql:3306/smartclinic?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - --spring.data.mongodb.uri=mongodb://mongo:27017/smartclinic
+      - --spring.mongodb.uri=mongodb://mongo:27017/smartclinic
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smartclinic?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: smartclinic
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/smartclinic
+      SPRING_DATA_MONGODB_HOST: mongo
+      SPRING_DATA_MONGODB_PORT: 27017
+      SPRING_DATA_MONGODB_DATABASE: smartclinic
+      SPRING_MONGODB_URI: mongodb://mongo:27017/smartclinic
+      MONGODB_URI: mongodb://mongo:27017/smartclinic
+      SERVER_PORT: 8080
     ports:
       - "8080:8080"
-    volumes:
-      - .:/app
 
 volumes:
   mysql_data:

@@ -29,7 +29,6 @@ public class PatientRequest {
     @Email(message = "email must be valid")
     private String email;
 
-    @NotBlank(message = "password is required")
     private String password;
 
     @NotBlank(message = "phone is required")

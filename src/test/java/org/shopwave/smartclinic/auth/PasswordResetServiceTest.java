@@ -5,10 +5,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.shopwave.smartclinic.doctor.DoctorService;
-import org.shopwave.smartclinic.email.EmailService;
-import org.shopwave.smartclinic.patient.PatientService;
-import org.shopwave.smartclinic.admin.AdminService;
+import org.shopwave.smartclinic.service.admin.AdminService;
+import org.shopwave.smartclinic.service.auth.PasswordResetService;
+import org.shopwave.smartclinic.service.doctor.DoctorService;
+import org.shopwave.smartclinic.service.email.EmailService;
+import org.shopwave.smartclinic.service.patient.PatientService;
+import org.springframework.mail.MailSendException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -48,5 +50,20 @@ class PasswordResetServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> passwordResetService.completePatientReset("invalid-token", "new-pass"));
         assertTrue(ex.getMessage().contains("Invalid or expired"));
+    }
+
+    @Test
+    void requestPatientResetShouldReportMailFailure() {
+        when(patientService.findIdByEmail("patient@example.com")).thenReturn(42L);
+        doThrow(new MailSendException("SMTP unavailable"))
+                .when(emailService)
+                .sendPasswordResetLink(eq("patient@example.com"), eq("Patient"), anyString());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> passwordResetService.requestPatientReset("patient@example.com"));
+
+        assertTrue(ex.getMessage().contains("Unable to send"));
+        assertThrows(IllegalArgumentException.class,
+                () -> passwordResetService.completePatientReset("any-token", "new-pass"));
     }
 }

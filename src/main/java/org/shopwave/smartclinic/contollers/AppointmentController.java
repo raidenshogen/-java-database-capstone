@@ -1,8 +1,8 @@
 package org.shopwave.smartclinic.contollers;
 
-import org.shopwave.smartclinic.appointment.AppointmentService;
 import org.shopwave.smartclinic.dto.AppointmentRequest;
 import org.shopwave.smartclinic.dto.AppointmentResponse;
+import org.shopwave.smartclinic.service.appointment.AppointmentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,6 +39,9 @@ public class AppointmentController {
                 && !user.getId().equals(patientId)) {
             throw new IllegalStateException("Patients can only view their own appointments");
         }
+        if (user.getRole() == org.shopwave.smartclinic.security.UserRole.ROLE_DOCTOR) {
+            return appointmentService.findByPatientForDoctor(patientId, user.getId());
+        }
         return appointmentService.findByPatient(patientId);
     }
 
@@ -57,7 +60,7 @@ public class AppointmentController {
     @PostMapping
     @PreAuthorize("hasRole('PATIENT')")
     public ResponseEntity<AppointmentResponse> book(
-            @RequestBody AppointmentRequest request,
+            @RequestBody @jakarta.validation.Valid AppointmentRequest request,
             @AuthenticationPrincipal org.shopwave.smartclinic.security.ClinicUserDetails user) {
         if (!user.getId().equals(request.getPatientId())) {
             throw new IllegalStateException("Patients can only book for themselves");
@@ -86,7 +89,15 @@ public class AppointmentController {
                                       @RequestParam(defaultValue = "patient") String cancelledBy,
                                       @AuthenticationPrincipal org.shopwave.smartclinic.security.ClinicUserDetails user) {
         if ("doctor".equalsIgnoreCase(cancelledBy)) {
+            if (user.getRole() != org.shopwave.smartclinic.security.UserRole.ROLE_DOCTOR) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Only doctors can cancel appointments as a doctor");
+            }
             return appointmentService.cancelByDoctor(id, user.getId());
+        }
+        if (user.getRole() != org.shopwave.smartclinic.security.UserRole.ROLE_PATIENT) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Only patients can cancel appointments as a patient");
         }
         return appointmentService.cancelByPatient(id, user.getId());
     }

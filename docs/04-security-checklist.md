@@ -71,4 +71,4 @@ Derived from `schema-design.md`, `user_stories.md`, and `schema-architecture.md`
 - [ ] HTTPS enforced at deployment layer (reverse proxy / load balancer)
 - [ ] Database credentials injected via environment variables, not config files
 - [ ] SMTP credentials injected via environment variables
-- [ ] Admin seed password changed from default (`admin123`) in production
+- [ ] Admin seed password is supplied through `ADMIN_PASSWORD` and is not committed

@@ -21,6 +21,10 @@ public class AppointmentRequest {
     @NotNull(message = "patient id is required")
     private Long patientId;
 
+    private Long specialtyId;
+
+    private Long doctorId;
+
     @NotNull(message = "appointment date is required")
     private LocalDate appointmentDate;
 

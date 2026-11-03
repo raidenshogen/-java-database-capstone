@@ -44,7 +44,69 @@ Provides role-based dashboards for Admin, Doctor, and Patient users.
 - View appointment list (all statuses)
 - View prescription history (most recent marked "Current")
 
-## How to Run Locally
+## Screenshots
+
+The following screenshots show the main application screens:
+
+### Login
+
+![SmartClinic login page](screens/image-2.png)
+
+### Patient Dashboard
+
+![SmartClinic patient dashboard](screens/image-5.png)
+
+### Admin Dashboard
+
+![SmartClinic admin dashboard](screens/image-3.png)
+![SmartClinic admin dashboard-list-doctor-patient](screens/image-4.png)
+
+### Doctor Dashboard — Schedule
+
+![SmartClinic doctor schedule dashboard](screens/image.png)
+
+### Doctor Dashboard — Working Hours and Blocked Time
+
+![SmartClinic doctor working hours dashboard](screens/image-1.png)
+## Run with Docker (recommended)
+
+### Prerequisites
+
+- Docker Desktop installed and running
+- A copy of `.env.example` named `.env` beside `docker-compose.yml`
+- SMTP credentials in `.env` if password-reset or email notifications are needed
+
+From the directory containing `docker-compose.yml`:
+
+```powershell
+cd SmartClinic\SmartClinic
+Copy-Item .env.example .env
+# Edit .env and set secure passwords and SMTP values
+docker compose up -d --build
+docker compose ps
+```
+
+Open [http://localhost:8080/login](http://localhost:8080/login).
+
+The Compose stack starts:
+
+- SmartClinic at `localhost:8080`
+- MySQL at `localhost:3307`
+- MongoDB at `localhost:27017`
+
+Useful commands:
+
+```powershell
+docker compose logs -f app
+docker compose down
+# Also remove database volumes (destructive):
+docker compose down -v
+```
+
+The active container build is [`Dockerfile`](Dockerfile), which
+`docker-compose.yml` uses directly.
+
+## Run Locally
 
 ### Prerequisites
 - Java 17
@@ -53,7 +115,10 @@ Provides role-based dashboards for Admin, Doctor, and Patient users.
 - SMTP server for email (optional for MVP)
 
 ### Configuration
-Copy and edit `application.properties`:
+
+Use environment variables where possible. For a local run, copy `.env.example`
+to `.env` and edit it. The application reads local database defaults from
+`src/main/resources/application.properties`.
 
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/smartclinic
@@ -81,8 +146,10 @@ mvn spring-boot:run
 The application starts on port 8080 (configurable via `server.port`).
 
 ### Default Admin Account
-- Username: `admin`
-- Password: `admin123` (change in production!)
+
+The seeded admin username is `admin` unless overridden with `ADMIN_USERNAME`.
+Set a secure `ADMIN_PASSWORD` in `.env`; the application will not start without
+an explicit admin password.
 
 ## Project Structure
 
@@ -126,6 +193,7 @@ src/main/java/org/shopwave/smartclinic/
 
 ### Doctors
 - `GET /api/doctors` — list active
+- `GET /api/patients/doctor/{doctorId}` — list the doctor's assigned active patients
 - `POST /api/doctors` — create (Admin)
 - `PUT /api/doctors/{id}` — update (Admin)
 - `DELETE /api/doctors/{id}` — deactivate (Admin)
@@ -152,17 +220,16 @@ src/main/java/org/shopwave/smartclinic/
 - `PUT /api/prescriptions/{id}` — update (Doctor, own only)
 - `DELETE /api/prescriptions/{id}` — delete (Doctor, own only)
 
-## What I Would Improve Next
+Doctor dashboard views:
+- `/doctor/dashboard` — schedule, working hours, blocked time, and appointment actions
+- `/doctor/patients` — assigned patient list with patient details, appointment history, and prescription history
 
-1. **Unit + integration tests** — JUnit 5 tests for service layer (double-booking, password change, prescription ownership)
-2. **CORS configuration** — for frontend on different origin
-3. **Password reset token expiration** — currently in-memory, no TTL enforcement
-4. **HTTPS enforcement** — at deployment layer
-5. **Email templates** — HTML emails instead of plain text
-6. **Patient self-registration** — currently admin-only
-7. **Pagination** — for large appointment/patient lists
-8. **Docker Compose** — for MySQL + MongoDB + app orchestration
-9. **OpenAPI/Swagger docs** — for REST API documentation
+## Project Documentation
+
+- [schema-architecture.md](schema-architecture.md) — application architecture
+- [schema-design.md](schema-design.md) — MySQL and MongoDB design
+- [user_stories.md](user_stories.md) — role requirements and acceptance criteria
+- [docs/04-security-checklist.md](docs/04-security-checklist.md) — security checklist
 
 ## License
 

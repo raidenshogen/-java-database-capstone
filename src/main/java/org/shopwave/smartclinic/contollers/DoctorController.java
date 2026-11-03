@@ -1,9 +1,12 @@
 package org.shopwave.smartclinic.contollers;
 
-import org.shopwave.smartclinic.doctor.DoctorService;
 import org.shopwave.smartclinic.dto.DoctorRequest;
 import org.shopwave.smartclinic.dto.DoctorResponse;
+import org.shopwave.smartclinic.dto.BlockedSlotRequest;
+import org.shopwave.smartclinic.dto.BlockedSlotResponse;
 import org.shopwave.smartclinic.security.ClinicUserDetails;
+import org.shopwave.smartclinic.service.doctor.DoctorBlockedSlotService;
+import org.shopwave.smartclinic.service.doctor.DoctorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,9 +30,12 @@ import java.util.Map;
 public class DoctorController {
 
     private final DoctorService doctorService;
+    private final DoctorBlockedSlotService blockedSlotService;
 
-    public DoctorController(DoctorService doctorService) {
+    public DoctorController(DoctorService doctorService,
+                            DoctorBlockedSlotService blockedSlotService) {
         this.doctorService = doctorService;
+        this.blockedSlotService = blockedSlotService;
     }
 
     @GetMapping
@@ -49,7 +55,7 @@ public class DoctorController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<DoctorResponse> create(@RequestBody DoctorRequest request) {
+    public ResponseEntity<DoctorResponse> create(@RequestBody @jakarta.validation.Valid DoctorRequest request) {
         DoctorResponse created = doctorService.create(request);
         return ResponseEntity.created(URI.create("/api/doctors/" + created.getId()))
                 .body(created);
@@ -58,7 +64,7 @@ public class DoctorController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public DoctorResponse update(@PathVariable Long id,
-                                 @RequestBody DoctorRequest request) {
+                                 @RequestBody @jakarta.validation.Valid DoctorRequest request) {
         return doctorService.update(id, request);
     }
 
@@ -74,9 +80,69 @@ public class DoctorController {
     public ResponseEntity<Void> setWorkingHours(@PathVariable Long id,
                                                 @RequestParam java.time.LocalTime start,
                                                 @RequestParam java.time.LocalTime end,
-                                                @RequestParam Integer slotDurationMinutes) {
+                                                @RequestParam Integer slotDurationMinutes,
+                                                @AuthenticationPrincipal ClinicUserDetails user) {
+        if (!userIdMatchesDoctor(id, user)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Doctors can only update their own working hours");
+        }
         doctorService.setWorkingHours(id, start, end, slotDurationMinutes);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/blocked-slots")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public BlockedSlotResponse blockSlot(@PathVariable Long id,
+                                         @RequestBody @jakarta.validation.Valid BlockedSlotRequest request,
+                                         @AuthenticationPrincipal ClinicUserDetails user) {
+        if (!userIdMatchesDoctor(id, user)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Doctors can only block their own time");
+        }
+
+        return blockedSlotService.create(id, request);
+    }
+
+    @GetMapping("/{id}/blocked-slots/conflicts")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public List<org.shopwave.smartclinic.dto.AppointmentResponse> blockedSlotConflicts(
+            @PathVariable Long id,
+            @RequestParam java.time.LocalDateTime startDateTime,
+            @RequestParam java.time.LocalDateTime endDateTime,
+            @AuthenticationPrincipal ClinicUserDetails user) {
+        if (!userIdMatchesDoctor(id, user)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Doctors can only inspect their own blocked time");
+        }
+        return blockedSlotService.findConflicts(id, startDateTime, endDateTime);
+    }
+
+    @GetMapping("/{id}/blocked-slots")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public List<BlockedSlotResponse> findBlockedSlots(@PathVariable Long id,
+                                                       @AuthenticationPrincipal ClinicUserDetails user) {
+        if (!userIdMatchesDoctor(id, user)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Doctors can only view their own blocked time");
+        }
+        return blockedSlotService.findByDoctor(id);
+    }
+
+    @DeleteMapping("/{id}/blocked-slots/{slotId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<Void> unblockSlot(@PathVariable Long id,
+                                            @PathVariable Long slotId,
+                                            @AuthenticationPrincipal ClinicUserDetails user) {
+        if (!userIdMatchesDoctor(id, user)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Doctors can only unblock their own time");
+        }
+        blockedSlotService.delete(id, slotId);
+        return ResponseEntity.noContent().build();
+    }
+
+    private boolean userIdMatchesDoctor(Long doctorId, ClinicUserDetails user) {
+        return user != null && doctorId.equals(user.getId());
     }
 
     /**
@@ -108,6 +174,19 @@ public class DoctorController {
         response.put("doctorId", id);
         response.put("date", date);
         response.put("availableSlots", slots);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/availability")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<Map<String, Object>> getSpecialtyAvailability(
+            @RequestParam Long specialtyId,
+            @RequestParam LocalDate date) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("specialtyId", specialtyId);
+        response.put("date", date);
+        response.put("availableSlots", doctorService.getAvailableSlotsBySpecialty(specialtyId, date));
         return ResponseEntity.ok(response);
     }
 }

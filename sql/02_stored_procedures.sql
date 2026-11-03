@@ -1,20 +1,9 @@
 -- ============================================================================
 -- Smart Clinic — Stored Procedures
 --
--- Add your procedures below. Run the file after editing:
---   mysql -u root -p < sql/02_stored_procedures.sql
--- (or open it in MySQL Workbench and execute)
---
--- Template:
---   DELIMITER $$
---   CREATE PROCEDURE procedure_name(IN param INT)
---   BEGIN
---       SELECT ...;
---   END$$
---   DELIMITER ;
---
--- Re-creating an existing procedure needs DROP PROCEDURE IF EXISTS first:
---   DROP PROCEDURE IF EXISTS procedure_name$$
+-- Run from the project root:
+--   docker compose exec -T mysql mysql -uroot -prootpassword \
+--     < sql/02_stored_procedures.sql
 -- ============================================================================
 
 USE smartclinic;
@@ -22,20 +11,86 @@ USE smartclinic;
 DELIMITER $$
 
 -- ---------------------------------------------------------------------------
--- Example (commented out — uncomment, rename, and adapt as your first
--- procedure). This one counts a doctor's SCHEDULED appointments on a date:
---
--- DROP PROCEDURE IF EXISTS sp_count_scheduled_appointments$$
--- CREATE PROCEDURE sp_count_scheduled_appointments(
---     IN p_doctor_id BIGINT,
---     IN p_date DATE
--- )
--- BEGIN
---     SELECT COUNT(*) AS scheduled_count
---     FROM appointments
---     WHERE doctor_id = p_doctor_id
---       AND appointment_date = p_date
---       AND status = 'SCHEDULED';
--- END$$
+-- Procedure 1: GetDailyAppointmentReportByDoctor
+-- Returns one row for every active doctor, including doctors with no
+-- appointments on the requested date.
+-- ---------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS GetDailyAppointmentReportByDoctor$$
+
+CREATE PROCEDURE GetDailyAppointmentReportByDoctor(IN input_date DATE)
+BEGIN
+    SELECT
+        d.id AS doctor_id,
+        d.first_name,
+        d.last_name,
+        s.name AS specialty,
+        COUNT(a.id) AS total_appointments,
+        SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN a.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled,
+        SUM(CASE WHEN a.status = 'NO_SHOW' THEN 1 ELSE 0 END) AS no_show,
+        SUM(CASE WHEN a.status = 'SCHEDULED' THEN 1 ELSE 0 END) AS still_scheduled
+    FROM doctors d
+        LEFT JOIN specialties s ON s.id = d.specialty_id
+        LEFT JOIN appointments a
+            ON a.doctor_id = d.id
+            AND a.appointment_date = input_date
+    WHERE d.is_active = TRUE
+    GROUP BY d.id, d.first_name, d.last_name, s.name
+    ORDER BY total_appointments DESC, d.id ASC;
+END$$
+
+-- ---------------------------------------------------------------------------
+-- Procedure 2: GetDoctorWithMostPatientsByMonth
+-- "Saw" means COMPLETED appointments. Ties are resolved by total visits and
+-- then doctor ID for deterministic output.
+-- ---------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS GetDoctorWithMostPatientsByMonth$$
+
+CREATE PROCEDURE GetDoctorWithMostPatientsByMonth(
+    IN input_month INT,
+    IN input_year INT
+)
+BEGIN
+    SELECT
+        d.id AS doctor_id,
+        d.first_name,
+        d.last_name,
+        COUNT(DISTINCT a.patient_id) AS distinct_patients_seen,
+        COUNT(a.id) AS total_completed_visits
+    FROM appointments a
+        JOIN doctors d ON d.id = a.doctor_id
+    WHERE a.status = 'COMPLETED'
+        AND MONTH(a.appointment_date) = input_month
+        AND YEAR(a.appointment_date) = input_year
+    GROUP BY d.id, d.first_name, d.last_name
+    ORDER BY distinct_patients_seen DESC,
+             total_completed_visits DESC,
+             d.id ASC
+    LIMIT 1;
+END$$
+
+-- ---------------------------------------------------------------------------
+-- Procedure 3: GetDoctorWithMostPatientsByYear
+-- ---------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS GetDoctorWithMostPatientsByYear$$
+
+CREATE PROCEDURE GetDoctorWithMostPatientsByYear(IN input_year INT)
+BEGIN
+    SELECT
+        d.id AS doctor_id,
+        d.first_name,
+        d.last_name,
+        COUNT(DISTINCT a.patient_id) AS distinct_patients_seen,
+        COUNT(a.id) AS total_completed_visits
+    FROM appointments a
+        JOIN doctors d ON d.id = a.doctor_id
+    WHERE a.status = 'COMPLETED'
+        AND YEAR(a.appointment_date) = input_year
+    GROUP BY d.id, d.first_name, d.last_name
+    ORDER BY distinct_patients_seen DESC,
+             total_completed_visits DESC,
+             d.id ASC
+    LIMIT 1;
+END$$
 
 DELIMITER ;

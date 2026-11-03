@@ -45,23 +45,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .build(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex,
-            org.springframework.http.HttpHeaders headers,
-            HttpStatus status,
-            org.springframework.web.context.request.WebRequest request) {
-
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String message = error.getDefaultMessage();
-            errors.put(fieldName, message);
-        });
-
-        return ResponseEntity.badRequest().body(errors);
-    }
-
     private ResponseEntity<ErrorResponse> build(ErrorResponse body, HttpStatus status) {
         return ResponseEntity.status(status).body(body);
     }

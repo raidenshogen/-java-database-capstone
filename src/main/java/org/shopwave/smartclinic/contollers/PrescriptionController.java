@@ -2,7 +2,7 @@ package org.shopwave.smartclinic.contollers;
 
 import org.shopwave.smartclinic.dto.PrescriptionRequest;
 import org.shopwave.smartclinic.dto.PrescriptionResponse;
-import org.shopwave.smartclinic.prescription.PrescriptionService;
+import org.shopwave.smartclinic.service.prescription.PrescriptionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,6 +37,9 @@ public class PrescriptionController {
                 && !user.getId().equals(patientId)) {
             throw new IllegalStateException("Patients can only view their own prescriptions");
         }
+        if (user.getRole() == org.shopwave.smartclinic.security.UserRole.ROLE_DOCTOR) {
+            return prescriptionService.findByPatientForDoctor(patientId, user.getId());
+        }
         return prescriptionService.findByPatient(patientId);
     }
 
@@ -53,7 +56,7 @@ public class PrescriptionController {
     @GetMapping("/{id}")
     public PrescriptionResponse findById(@PathVariable String id,
                                          @AuthenticationPrincipal org.shopwave.smartclinic.security.ClinicUserDetails user) {
-        return prescriptionService.findById(id);
+        return prescriptionService.findByIdForUser(id, user.getId(), user.getRole());
     }
 
     @PostMapping

@@ -11,13 +11,16 @@ import org.shopwave.smartclinic.model.AppointmentStatus;
 import org.shopwave.smartclinic.model.Doctor;
 import org.shopwave.smartclinic.model.Patient;
 import org.shopwave.smartclinic.repository.AppointmentRepository;
+import org.shopwave.smartclinic.repository.DoctorBlockedSlotRepository;
 import org.shopwave.smartclinic.repository.DoctorRepository;
 import org.shopwave.smartclinic.repository.PatientRepository;
+import org.shopwave.smartclinic.service.appointment.AppointmentService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Optional;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,11 +41,16 @@ class AppointmentServiceTest {
     @Mock
     private DoctorRepository doctorRepository;
 
+    @Mock
+    private DoctorBlockedSlotRepository blockedSlotRepository;
+
     @InjectMocks
     private AppointmentService appointmentService;
 
+    private static final LocalDate TEST_DATE = LocalDate.of(2099, 3, 10);
+
     private static LocalDateTime slot(LocalTime time) {
-        return LocalDateTime.of(LocalDate.of(2025, 3, 10), time);
+        return LocalDateTime.of(TEST_DATE, time);
     }
 
     @Test
@@ -57,14 +65,14 @@ class AppointmentServiceTest {
 
         AppointmentRequest request = AppointmentRequest.builder()
                 .patientId(1L)
-                .appointmentDate(LocalDate.of(2025, 3, 10))
+                .appointmentDate(TEST_DATE)
                 .appointmentTime(LocalTime.of(10, 0))
                 .build();
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(10L)).thenReturn(Optional.of(doctor));
-        when(appointmentRepository.findScheduledByDoctorAndDateTime(
-                10L, LocalDate.of(2025, 3, 10), LocalTime.of(10, 0), AppointmentStatus.SCHEDULED))
+        when(blockedSlotRepository.findOverlapping(any(), any(), any())).thenReturn(java.util.List.of());
+        when(appointmentRepository.findOne(any(Specification.class)))
                 .thenReturn(Optional.of(new Appointment()));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
@@ -84,17 +92,17 @@ class AppointmentServiceTest {
 
         AppointmentRequest request = AppointmentRequest.builder()
                 .patientId(1L)
-                .appointmentDate(LocalDate.of(2025, 3, 10))
+                .appointmentDate(TEST_DATE)
                 .appointmentTime(LocalTime.of(11, 0))
                 .build();
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(10L)).thenReturn(Optional.of(doctor));
-        when(appointmentRepository.findScheduledByDoctorAndDateTime(
-                10L, LocalDate.of(2025, 3, 10), LocalTime.of(11, 0), AppointmentStatus.SCHEDULED))
+        when(blockedSlotRepository.findOverlapping(any(), any(), any())).thenReturn(java.util.List.of());
+        when(appointmentRepository.findOne(any(Specification.class)))
                 .thenReturn(Optional.empty());
-        when(appointmentRepository.findScheduledByPatient(1L, AppointmentStatus.SCHEDULED))
-                .thenReturn(Optional.of(new Appointment()));
+        when(appointmentRepository.findAll(any(Specification.class)))
+                .thenReturn(java.util.List.of(new Appointment()));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> appointmentService.book(request));
@@ -118,17 +126,17 @@ class AppointmentServiceTest {
 
         AppointmentRequest request = AppointmentRequest.builder()
                 .patientId(1L)
-                .appointmentDate(LocalDate.of(2025, 3, 10))
+                .appointmentDate(TEST_DATE)
                 .appointmentTime(LocalTime.of(10, 0))
                 .build();
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(10L)).thenReturn(Optional.of(doctor));
-        when(appointmentRepository.findScheduledByDoctorAndDateTime(
-                10L, LocalDate.of(2025, 3, 10), LocalTime.of(10, 0), AppointmentStatus.SCHEDULED))
+        when(blockedSlotRepository.findOverlapping(any(), any(), any())).thenReturn(java.util.List.of());
+        when(appointmentRepository.findOne(any(Specification.class)))
                 .thenReturn(Optional.empty());
-        when(appointmentRepository.findScheduledByPatient(1L, AppointmentStatus.SCHEDULED))
-                .thenReturn(Optional.empty());
+        when(appointmentRepository.findAll(any(Specification.class)))
+                .thenReturn(java.util.List.of());
         when(appointmentRepository.save(any(Appointment.class))).thenReturn(saved);
 
         var result = appointmentService.book(request);

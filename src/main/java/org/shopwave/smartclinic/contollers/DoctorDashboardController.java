@@ -1,7 +1,6 @@
 package org.shopwave.smartclinic.contollers;
 
-import org.shopwave.smartclinic.appointment.AppointmentService;
-import org.shopwave.smartclinic.doctor.DoctorService;
+import org.shopwave.smartclinic.service.appointment.AppointmentService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,12 +17,9 @@ import java.time.LocalDate;
 @Controller
 public class DoctorDashboardController {
 
-    private final DoctorService doctorService;
     private final AppointmentService appointmentService;
 
-    public DoctorDashboardController(DoctorService doctorService,
-                                     AppointmentService appointmentService) {
-        this.doctorService = doctorService;
+    public DoctorDashboardController(AppointmentService appointmentService) {
         this.appointmentService = appointmentService;
     }
 
@@ -31,7 +27,9 @@ public class DoctorDashboardController {
     public String dashboard(@AuthenticationPrincipal org.shopwave.smartclinic.security.ClinicUserDetails user,
                             Model model) {
         model.addAttribute("username", user.getUsername());
+        model.addAttribute("displayName", user.getDisplayName());
         model.addAttribute("role", user.getRole().name());
+        model.addAttribute("doctorId", user.getId());
         model.addAttribute("today", LocalDate.now());
         return "doctor/dashboard";
     }
@@ -45,5 +43,14 @@ public class DoctorDashboardController {
                 appointmentService.findScheduledByDoctorForDate(user.getId(), viewDate));
         model.addAttribute("date", viewDate);
         return "doctor/schedule";
+    }
+
+    @GetMapping("/doctor/patients")
+    public String patients(@AuthenticationPrincipal org.shopwave.smartclinic.security.ClinicUserDetails user,
+                           Model model) {
+        model.addAttribute("username", user.getUsername());
+        model.addAttribute("displayName", user.getDisplayName());
+        model.addAttribute("doctorId", user.getId());
+        return "doctor/patients";
     }
 }

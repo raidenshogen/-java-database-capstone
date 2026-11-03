@@ -22,7 +22,7 @@ import java.util.Map;
 @Service
 public class TokenService {
 
-    @Value("${jwt.secret:default-secret-key-change-in-production-min-32-chars}")
+    @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration-ms:86400000}")

@@ -72,7 +72,7 @@ public class Doctor {
 
     @NotNull
     @Column(name = "specialty_id", nullable = false)
-    private Integer specialtyId;
+    private Long specialtyId;
 
     /**
      * Navigation relationship to the specialty lookup table.
@@ -105,7 +105,7 @@ public class Doctor {
      * Available time slots for this doctor, derived from
      * {@code workingHoursStart}, {@code workingHoursEnd}, and
      * {@code slotDurationMinutes}. Not persisted — computed at runtime
-     * by {@link org.shopwave.smartclinic.doctor.DoctorService}.
+     * by {@link org.shopwave.smartclinic.service.doctor.DoctorService}.
      */
     @Transient
     private List<LocalTime> availableTimes;

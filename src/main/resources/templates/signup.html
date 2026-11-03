@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Patient signup')}"></head>
+<body>
+<svg th:replace="~{fragments :: icons}"></svg>
+<main class="auth">
+  <aside th:replace="~{fragments :: authHero}"></aside>
+  <section class="auth-panel">
+    <div class="auth-card wide">
+      <div class="eyebrow">New patient</div>
+      <h1>Create your patient account</h1>
+      <p class="lede">Only the information needed to identify and contact you is required. A doctor can complete your clinical record during your visit.</p>
+
+      <form id="signup-form" class="stack">
+        <div class="form-grid">
+          <label>First name<input name="firstName" autocomplete="given-name" required></label>
+          <label>Last name<input name="lastName" autocomplete="family-name" required></label>
+          <label class="f-full">Email<span class="field-icon"><svg class="i"><use href="#i-mail"/></svg><input name="email" type="email" autocomplete="email" required></span></label>
+          <label>Phone<span class="field-icon"><svg class="i"><use href="#i-phone"/></svg><input name="phone" autocomplete="tel" required></span></label>
+          <label>Date of birth <span class="muted">(optional)</span><input name="dateOfBirth" type="date"></label>
+          <label class="f-full">Password
+            <span class="field-icon has-toggle"><svg class="i"><use href="#i-lock"/></svg><input name="password" type="password" minlength="8" autocomplete="new-password" data-strength required>
+              <button type="button" class="toggle-pw" data-toggle-password aria-label="Show or hide password"><svg class="i"><use href="#i-eye"/></svg></button></span></label>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Create patient account</button>
+        <div id="signup-message" class="hidden"></div>
+      </form>
+      <div class="auth-links"><span>Already have an account?</span><a href="/login">Sign in</a></div>
+    </div>
+  </section>
+</main>
+<script src="/clinic.js"></script>
+<script>
+qs("#signup-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.target, message = qs("#signup-message"), btn = qs("[type=submit]", form);
+  const data = Object.fromEntries(new FormData(form));
+  if (!data.dateOfBirth) delete data.dateOfBirth;
+  setBusy(btn, true); hideMessage(message);
+  try {
+    await api("/api/public/patients", { method: "POST", body: JSON.stringify(data) });
+    showMessage(message, "Account created. Redirecting you to sign in…"); toast("Account created. You can now sign in.");
+    form.reset(); setTimeout(() => location.href = "/login", 1100);
+  } catch (error) { showMessage(message, error.message, "error"); setBusy(btn, false); }
+});
+</script>
+</body>
+</html>

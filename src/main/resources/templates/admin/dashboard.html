@@ -1,78 +1,273 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8"/>
-    <title>SmartClinic — Admin Dashboard</title>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; margin: 0; }
-        .topbar { background: #1f2937; color: white; padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-        .topbar a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
-        .topbar a:hover { text-decoration: underline; }
-        .container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; color: #111827; margin-bottom: 1rem; }
-        .section { background: white; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section h2 { font-size: 1.1rem; margin-top: 0; color: #374151; }
-        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
-        th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #e5e7eb; }
-        th { font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
-        tr:hover { background: #f9fafb; }
-        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
-        .badge-active { background: #dcfce7; color: #166534; }
-        .badge-inactive { background: #fee2e2; color: #991b1b; }
-        .btn { padding: 0.4rem 0.8rem; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-        .btn:hover { background: #f3f4f6; }
-        .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
-        .empty { color: #6b7280; font-style: italic; }
-    </style>
-</head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Admin workspace')}"></head>
 <body>
-<div class="topbar">
-    <div>SmartClinic · Admin Dashboard</div>
+<svg th:replace="~{fragments :: icons}"></svg>
+<header th:replace="~{fragments :: topbar('Admin')}"></header>
+
+<main class="container">
+  <!-- Hero -->
+  <section class="hero reveal">
     <div>
-        <span>Logged in as <b th:text="${username}"></b></span>
-        <a href="/perform-logout">Logout</a>
+      <div class="eyebrow"><i class="live-dot"></i>Clinic operations</div>
+      <h1>Keep the clinic moving</h1>
+      <p class="lede">Manage active care teams, patient records, and service demand from one place.</p>
+      <div class="hero-actions">
+        <button class="btn btn-light" type="button" data-open-tab="doctor"><svg class="i"><use href="#i-plus"/></svg>Add doctor</button>
+        <button class="btn btn-outline-light" type="button" data-open-tab="patient"><svg class="i"><use href="#i-user-plus"/></svg>Onboard patient</button>
+      </div>
     </div>
-</div>
+    <svg th:replace="~{fragments :: ecg}"></svg>
+  </section>
 
-<div class="container">
-    <h1>Clinic Overview</h1>
+  <!-- Metrics -->
+  <div class="grid grid-3">
+    <div class="metric reveal"><span class="icon-badge"><svg class="i"><use href="#i-heart"/></svg></span>
+      <div><span class="label">Active doctors</span><strong data-count th:text="${doctors.size()}">0</strong></div></div>
+    <div class="metric m-blue reveal"><span class="icon-badge"><svg class="i"><use href="#i-users"/></svg></span>
+      <div><span class="label">Active patients</span><strong data-count th:text="${patients.size()}">0</strong></div></div>
+    <div class="metric m-amber reveal"><span class="icon-badge"><svg class="i"><use href="#i-grid"/></svg></span>
+      <div><span class="label">Specialties</span><strong data-count th:text="${specialties.size()}">0</strong></div></div>
+  </div>
 
-    <div class="grid-2">
-        <div class="section">
-            <h2>Doctors ({{ doctors.size() }})</h2>
-            <table>
-                <thead><tr><th>Name</th><th>Email</th><th>Specialty</th><th>Status</th></tr></thead>
-                <tbody>
-                <tr th:each="d : ${doctors}">
-                    <td th:text="${d.firstName} + ' ' + d.lastName"></td>
-                    <td th:text="${d.email}"></td>
-                    <td th:text="${d.specialtyName}"></td>
-                    <td><span class="badge" th:class="${d.active} ? 'badge-active' : 'badge-inactive'" th:text="${d.active} ? 'Active' : 'Inactive'"></span></td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(doctors)}"><td colspan="4" class="empty">No doctors found.</td></tr>
-                </tbody>
-            </table>
-        </div>
+  <!-- Quick actions + chart -->
+  <div class="grid grid-main">
+    <section class="card reveal tabs-root" id="quick-actions">
+      <div class="card-head"><div class="card-title"><span class="icon-badge"><svg class="i"><use href="#i-plus"/></svg></span>
+        <div><h2>Quick actions</h2><p>Only administrators can add doctors and onboard patients.</p></div></div></div>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="doctor">Create doctor</button>
+        <button type="button" class="tab" data-tab="patient">Onboard patient</button>
+      </div>
 
-        <div class="section">
-            <h2>Patients ({{ patients.size() }})</h2>
-            <table>
-                <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead>
-                <tbody>
-                <tr th:each="p : ${patients}">
-                    <td th:text="${p.firstName} + ' ' + p.lastName"></td>
-                    <td th:text="${p.email}"></td>
-                    <td th:text="${p.phone}"></td>
-                    <td><span class="badge" th:class="${p.active} ? 'badge-active' : 'badge-inactive'" th:text="${p.active} ? 'Active' : 'Inactive'"></span></td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(patients)}"><td colspan="4" class="empty">No patients found.</td></tr>
-                </tbody>
-            </table>
-        </div>
+      <div data-panel="doctor">
+        <form id="doctor-create" class="stack">
+          <div class="form-grid">
+            <label>First name<input name="firstName" autocomplete="off" required></label>
+            <label>Last name<input name="lastName" autocomplete="off" required></label>
+            <label class="f-full">Email<input type="email" name="email" autocomplete="off" required></label>
+            <label class="f-full">Temporary password<input type="password" name="password" minlength="8" autocomplete="new-password" data-strength required></label>
+            <label>Specialty
+              <select name="specialtyId" required><option value="">Choose specialty</option>
+                <option th:each="s : ${specialties}" th:value="${s.id}" th:text="${s.name}"></option></select></label>
+            <label>Slot length
+              <select name="slotDurationMinutes"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option><option value="60">60 minutes</option></select></label>
+          </div>
+          <div id="doctor-message" class="hidden"></div>
+          <button class="btn btn-primary" type="submit"><svg class="i"><use href="#i-plus"/></svg>Create doctor</button>
+        </form>
+      </div>
+
+      <div data-panel="patient" class="hidden">
+        <form id="patient-create" class="stack">
+          <div class="form-grid">
+            <label>First name<input name="firstName" autocomplete="off" required></label>
+            <label>Last name<input name="lastName" autocomplete="off" required></label>
+            <label class="f-full">Email<input type="email" name="email" autocomplete="off" required></label>
+            <label class="f-full">Initial password<input type="password" name="password" minlength="8" autocomplete="new-password" data-strength required></label>
+            <label>Phone<input name="phone" required></label>
+            <label>Date of birth<input type="date" name="dateOfBirth"></label>
+            <label class="f-full">Assigned doctor
+              <select name="assignedDoctorId"><option value="">Unassigned</option>
+                <option th:each="d : ${doctors}" th:value="${d.id}" th:text="${d.firstName + ' ' + d.lastName + ' · ' + d.specialtyName}"></option></select></label>
+          </div>
+          <div id="patient-message" class="hidden"></div>
+          <button class="btn btn-primary" type="submit"><svg class="i"><use href="#i-user-plus"/></svg>Create patient</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card reveal">
+      <div class="card-head"><div class="card-title"><span class="icon-badge is-blue"><svg class="i"><use href="#i-activity"/></svg></span>
+        <div><h2>Patient distribution</h2><p>Active patients grouped by assigned specialty.</p></div></div></div>
+      <div id="patient-chart"><div class="chart-wrap"><span class="skeleton circle"></span><div class="stack"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></div></div></div>
+    </section>
+  </div>
+
+  <!-- Doctors -->
+  <section class="card reveal">
+    <div class="card-head">
+      <div class="card-title"><span class="icon-badge"><svg class="i"><use href="#i-heart"/></svg></span>
+        <div><h2>Doctors</h2><p>Edit profiles, trigger password resets, or deactivate accounts without removing history.</p></div></div>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><input data-filter="#doctor-table" placeholder="Search doctors…" aria-label="Search doctors"></div>
     </div>
-</div>
+    <div class="table-wrap">
+      <table id="doctor-table">
+        <thead><tr><th>Doctor</th><th>Specialty</th><th>Slot</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr th:each="d : ${doctors}">
+            <td><div class="cell-user"><span class="avatar" data-avatar th:text="${d.firstName + ' ' + d.lastName}"></span>
+              <div><strong th:text="${d.firstName + ' ' + d.lastName}"></strong><span class="muted small" th:text="${d.email}"></span></div></div></td>
+            <td><span class="tag" th:text="${d.specialtyName}"></span></td>
+            <td th:text="${d.slotDurationMinutes + ' min'}"></td>
+            <td><span class="badge" th:classappend="${d.active} ? 'badge-active' : 'badge-inactive'"><i class="dot"></i><span th:text="${d.active} ? 'Active' : 'Inactive'"></span></span></td>
+            <td><div class="row-actions" th:if="${d.active}">
+              <button type="button" class="btn btn-icon btn-soft" title="Edit doctor" aria-label="Edit doctor" data-action="edit-doctor"
+                      th:data-id="${d.id}" th:data-first="${d.firstName}" th:data-last="${d.lastName}" th:data-email="${d.email}"
+                      th:data-specialty="${d.specialtyId}" th:data-slot="${d.slotDurationMinutes}"><svg class="i"><use href="#i-edit"/></svg></button>
+              <button type="button" class="btn btn-icon btn-soft" title="Send password reset" aria-label="Send password reset" data-action="reset-doctor"
+                      th:data-id="${d.id}" th:data-email="${d.email}"><svg class="i"><use href="#i-key"/></svg></button>
+              <button type="button" class="btn btn-icon btn-danger" title="Deactivate" aria-label="Deactivate doctor" data-action="deactivate-doctor"
+                      th:data-id="${d.id}" th:data-name="${d.firstName + ' ' + d.lastName}"><svg class="i"><use href="#i-ban"/></svg></button>
+            </div></td>
+          </tr>
+          <tr class="empty-row" th:if="${#lists.isEmpty(doctors)}"><td colspan="5" class="empty">No active doctors yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Patients -->
+  <section class="card reveal">
+    <div class="card-head">
+      <div class="card-title"><span class="icon-badge is-blue"><svg class="i"><use href="#i-users"/></svg></span>
+        <div><h2>Patients</h2><p>Active patient records and assigned care.</p></div></div>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><input data-filter="#patient-table" placeholder="Search patients…" aria-label="Search patients"></div>
+    </div>
+    <div class="table-wrap">
+      <table id="patient-table">
+        <thead><tr><th>Patient</th><th>Contact</th><th>Assigned doctor</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr th:each="p : ${patients}">
+            <td><div class="cell-user"><span class="avatar" data-avatar th:text="${p.firstName + ' ' + p.lastName}"></span>
+              <div><strong th:text="${p.firstName + ' ' + p.lastName}"></strong><span class="muted small" th:text="${p.email}"></span></div></div></td>
+            <td th:text="${p.phone}"></td>
+            <td><span class="doc-ref" th:data-doctor-id="${p.assignedDoctorId}"
+                      th:text="${p.assignedDoctorId != null ? 'Doctor #' + p.assignedDoctorId : 'Unassigned'}"></span></td>
+            <td><span class="badge badge-active"><i class="dot"></i>Active</span></td>
+            <td><div class="row-actions">
+              <button type="button" class="btn btn-sm btn-soft" data-action="edit-patient" title="Edit or reassign"
+                      th:data-id="${p.id}" th:data-first="${p.firstName}" th:data-last="${p.lastName}" th:data-email="${p.email}"
+                      th:data-phone="${p.phone}" th:data-dob="${p.dateOfBirth}" th:data-doctor="${p.assignedDoctorId}"><svg class="i"><use href="#i-edit"/></svg>Edit</button>
+              <button type="button" class="btn btn-icon btn-danger" title="Deactivate" aria-label="Deactivate patient" data-action="deactivate-patient"
+                      th:data-id="${p.id}" th:data-name="${p.firstName + ' ' + p.lastName}"><svg class="i"><use href="#i-ban"/></svg></button>
+            </div></td>
+          </tr>
+          <tr class="empty-row" th:if="${#lists.isEmpty(patients)}"><td colspan="5" class="empty">No active patients yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="/clinic.js"></script>
+<script>
+const specialtyOptions = () => qsa('#doctor-create [name=specialtyId] option').filter(o => o.value).map(o => ({ value: o.value, label: o.textContent.trim() }));
+const doctorOptions = () => [{ value: "", label: "Unassigned" }, ...qsa('#patient-create [name=assignedDoctorId] option').filter(o => o.value).map(o => ({ value: o.value, label: o.textContent.trim() }))];
+
+// Replace "Doctor #id" with the real doctor's name
+document.addEventListener("DOMContentLoaded", () => {
+  const names = Object.fromEntries(doctorOptions().filter(o => o.value).map(o => [o.value, o.label.split(" · ")[0]]));
+  qsa(".doc-ref[data-doctor-id]").forEach(el => { const n = names[el.dataset.doctorId]; if (n) el.textContent = n; });
+});
+
+// Hero buttons → open the right tab and scroll
+qsa("[data-open-tab]").forEach(b => b.addEventListener("click", () => {
+  const root = qs("#quick-actions"); showTab(root, b.dataset.openTab);
+  root.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => qs(`[data-panel=${b.dataset.openTab}] input`, root)?.focus({ preventScroll: true }), 450);
+}));
+
+/* ---- Row actions (event delegation) ---- */
+const actions = {
+  async "deactivate-doctor"(b) {
+    if (!await confirmAction(`${b.dataset.name} will no longer be able to sign in or take bookings. Their history is preserved.`, { title: "Deactivate doctor?", confirmLabel: "Deactivate", danger: true })) return;
+    try { await api(`/api/doctors/${b.dataset.id}`, { method: "DELETE" }); toast("Doctor deactivated."); reloadSoon(); } catch (e) { toast(e.message, "error"); }
+  },
+  "edit-doctor"(b) {
+    const d = b.dataset;
+    modalForm({ title: "Edit doctor", subtitle: d.email, submitLabel: "Save changes",
+      fields: [
+        { name: "firstName", label: "First name", value: d.first, required: true, half: true },
+        { name: "lastName", label: "Last name", value: d.last, required: true, half: true },
+        { name: "email", label: "Email", type: "email", value: d.email, required: true },
+        { name: "specialtyId", label: "Specialty", type: "select", value: d.specialty, options: specialtyOptions(), required: true, half: true },
+        { name: "slotDurationMinutes", label: "Slot length", type: "select", value: d.slot, half: true,
+          options: [{ value: 15, label: "15 minutes" }, { value: 30, label: "30 minutes" }, { value: 60, label: "60 minutes" }] }
+      ],
+      async onSubmit(v) {
+        await api(`/api/doctors/${d.id}`, { method: "PUT", body: JSON.stringify({ firstName: v.firstName, lastName: v.lastName, email: v.email, password: null, specialtyId: Number(v.specialtyId), slotDurationMinutes: Number(v.slotDurationMinutes) }) });
+        toast("Doctor profile updated."); reloadSoon();
+      } });
+  },
+  async "reset-doctor"(b) {
+    if (!await confirmAction(`Send a temporary password to ${b.dataset.email}?`, { title: "Reset password", confirmLabel: "Send reset" })) return;
+    try { const r = await api("/api/auth/doctor-reset", { method: "POST", body: JSON.stringify({ doctorId: b.dataset.id, email: b.dataset.email }) }); toast(r.message || "Reset email sent."); }
+    catch (e) { toast(e.message, "error"); }
+  },
+  async "deactivate-patient"(b) {
+    if (!await confirmAction(`${b.dataset.name} will be deactivated. Their history is preserved.`, { title: "Deactivate patient?", confirmLabel: "Deactivate", danger: true })) return;
+    try { await api(`/api/patients/${b.dataset.id}`, { method: "DELETE" }); toast("Patient deactivated."); reloadSoon(); } catch (e) { toast(e.message, "error"); }
+  },
+  "edit-patient"(b) {
+    const d = b.dataset;
+    modalForm({ title: "Edit patient", subtitle: d.email, submitLabel: "Save changes",
+      fields: [
+        { name: "firstName", label: "First name", value: d.first, required: true, half: true },
+        { name: "lastName", label: "Last name", value: d.last, required: true, half: true },
+        { name: "email", label: "Email", type: "email", value: d.email, required: true },
+        { name: "phone", label: "Phone", value: d.phone, required: true, half: true },
+        { name: "dateOfBirth", label: "Date of birth", type: "date", value: d.dob, half: true },
+        { name: "assignedDoctorId", label: "Assigned doctor", type: "select", value: d.doctor || "", options: doctorOptions() }
+      ],
+      async onSubmit(v) {
+        await api(`/api/patients/${d.id}`, { method: "PUT", body: JSON.stringify({ firstName: v.firstName, lastName: v.lastName, email: v.email, password: null, phone: v.phone, dateOfBirth: v.dateOfBirth || null, assignedDoctorId: v.assignedDoctorId ? Number(v.assignedDoctorId) : null }) });
+        toast("Patient record updated."); reloadSoon();
+      } });
+  }
+};
+document.addEventListener("click", e => { const b = e.target.closest("[data-action]"); if (b && actions[b.dataset.action]) actions[b.dataset.action](b); });
+
+/* ---- Create forms ---- */
+function wireCreate(formId, msgId, url, label, prepare) {
+  qs("#" + formId).addEventListener("submit", async e => {
+    e.preventDefault();
+    const form = e.target, msg = qs("#" + msgId), btn = qs("[type=submit]", form);
+    const data = prepare(Object.fromEntries(new FormData(form)));
+    hideMessage(msg); setBusy(btn, true);
+    try { 
+      await api(url, { 
+        method: "POST", 
+        body: JSON.stringify(data)
+      }); 
+      toast(label); form.reset(); reloadSoon(); 
+    }
+    catch (err) { 
+      showMessage(msg, err.message, "error"); 
+      setBusy(btn, false); 
+    }
+  });
+}
+wireCreate("doctor-create", "doctor-message", "/api/doctors", "Doctor account created.", d => ({ ...d, specialtyId: Number(d.specialtyId), slotDurationMinutes: Number(d.slotDurationMinutes) }));
+wireCreate("patient-create", "patient-message", "/api/patients", "Patient record created.", d => { if (d.assignedDoctorId) d.assignedDoctorId = Number(d.assignedDoctorId); else delete d.assignedDoctorId; return d; });
+
+/* ---- Animated donut ---- */
+async function loadStats() {
+  const wrap = qs("#patient-chart");
+  const palette = ["#0d9488", "#2b7de9", "#f2a93b", "#8b6fd6", "#e5634d", "#6cb7c9"];
+  try {
+    const data = await api("/api/admin/statistics/patients-by-specialty");
+    const total = data.reduce((s, i) => s + i.patientCount, 0);
+    if (!total) { wrap.innerHTML = emptyState("users", "No patient assignments yet", "Assign patients to doctors to see the breakdown."); return; }
+    let off = 0;
+    const segs = data.map((it, i) => {
+      const pct = it.patientCount / total * 100, dash = Math.max(pct - (data.length > 1 ? 1.2 : 0), 0.1);
+      const s = `<circle class="seg" cx="21" cy="21" r="15.9155" stroke="${palette[i % palette.length]}" stroke-dasharray="0 100" stroke-dashoffset="${-off}" data-dash="${dash} ${100 - dash}"/>`;
+      off += pct; return s;
+    }).join("");
+    const legend = data.map((it, i) => { const pct = Math.round(it.patientCount / total * 100); return `
+      <div class="legend-item" style="--i:${i};--c:${palette[i % palette.length]}">
+        <div class="legend-top"><span><i></i>${esc(it.specialtyName)}</span><b>${it.patientCount} · ${pct}%</b></div>
+        <div class="legend-bar"><i style="--w:${pct}%"></i></div></div>`; }).join("");
+    wrap.innerHTML = `<div class="chart-wrap">
+      <div class="donut"><svg viewBox="0 0 42 42" role="img" aria-label="Patients by specialty"><circle class="track" cx="21" cy="21" r="15.9155"/>${segs}</svg>
+        <div class="donut-center"><strong data-count>${total}</strong><span>patients</span></div></div>
+      <div class="legend">${legend}</div></div>`;
+    countUp(qs("[data-count]", wrap));
+    requestAnimationFrame(() => requestAnimationFrame(() => qsa(".seg", wrap).forEach(c => c.style.strokeDasharray = c.dataset.dash)));
+  } catch (e) { wrap.innerHTML = emptyState("alert", "Statistics unavailable", e.message); }
+}
+loadStats();
+</script>
 </body>
 </html>

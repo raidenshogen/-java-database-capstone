@@ -1,63 +1,173 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8"/>
-    <title>SmartClinic — Doctor Dashboard</title>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; margin: 0; }
-        .topbar { background: #1f2937; color: white; padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-        .topbar a { color: #93c5fd; text-decoration: none; margin-left: 1rem; }
-        .topbar a:hover { text-decoration: underline; }
-        .container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; color: #111827; margin-bottom: 1rem; }
-        .section { background: white; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section h2 { font-size: 1.1rem; margin-top: 0; color: #374151; }
-        .date-picker { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-        .date-picker input[type="date"] { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
-        th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #e5e7eb; }
-        th { font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
-        tr:hover { background: #f9fafb; }
-        .status-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-scheduled { background: #dbeafe; color: #1e40af; }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-cancelled { background: #fee2e2; color: #991b1b; }
-        .status-no-show { background: #fef3c7; color: #92400e; }
-        .empty { color: #6b7280; font-style: italic; }
-    </style>
-</head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Doctor workspace')}"></head>
 <body>
-<div class="topbar">
-    <div>SmartClinic · Doctor Dashboard</div>
+<svg th:replace="~{fragments :: icons}"></svg>
+<header th:replace="~{fragments :: topbar('Doctor')}"></header>
+
+<main class="container">
+  <section class="hero reveal">
     <div>
-        <span>Logged in as <b th:text="${username}"></b></span>
-        <a href="/perform-logout">Logout</a>
+      <div class="eyebrow"><i class="live-dot"></i>Today's care</div>
+      <h1>Your schedule, at a glance</h1>
+      <p class="lede">Review scheduled visits and keep future availability accurate for patients.</p>
     </div>
-</div>
+    <div class="hero-card"><div class="k">Selected day</div><strong id="hero-date">—</strong><span id="hero-count">Loading…</span></div>
+    <svg th:replace="~{fragments :: ecg}"></svg>
+  </section>
 
-<div class="container">
-    <h1>Today's Schedule</h1>
-
-    <div class="section">
-        <div class="date-picker">
-            <label for="date">Date:</label>
-            <input type="date" id="date" name="date" th:value="${date}" onchange="this.form.submit()"/>
+  <div class="grid grid-main">
+    <!-- Schedule -->
+    <section class="card reveal">
+      <div class="card-head">
+        <div class="card-title"><span class="icon-badge"><svg class="i"><use href="#i-calendar"/></svg></span>
+          <div><h2>Appointments</h2><p>Only scheduled visits are shown. Use the date to look ahead.</p></div></div>
+        <div class="date-nav">
+          <button type="button" class="btn btn-icon" id="prev-day" aria-label="Previous day"><svg class="i"><use href="#i-chev-left"/></svg></button>
+          <input id="schedule-date" type="date" th:value="${today}" aria-label="Schedule date">
+          <button type="button" class="btn btn-icon" id="next-day" aria-label="Next day"><svg class="i"><use href="#i-chev-right"/></svg></button>
+          <button type="button" class="btn btn-soft btn-sm" id="today-btn">Today</button>
         </div>
+      </div>
+      <div id="schedule-message" class="hidden"></div>
+      <div id="schedule-list" class="stack"></div>
+    </section>
 
-        <table>
-            <thead><tr><th>Time</th><th>Patient</th><th>Status</th></tr></thead>
-            <tbody>
-            <tr th:each="a : ${appointments}">
-                <td th:text="${a.appointmentTime}"></td>
-                <td th:text="${a.patientName}"></td>
-                <td>
-                    <span class="status-badge" th:class="|status-${a.status.toLowerCase()}|" th:text="${a.status}"></span>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(appointments)}"><td colspan="3" class="empty">No appointments scheduled for this date.</td></tr>
-            </tbody>
-        </table>
+    <div class="stack-lg">
+      <!-- Working hours -->
+      <section class="card reveal" style="margin:0">
+        <div class="card-head"><div class="card-title"><span class="icon-badge is-blue"><svg class="i"><use href="#i-clock"/></svg></span>
+          <div><h2>Working hours</h2><p>Changes apply to future availability.</p></div></div></div>
+        <form id="hours-form" class="stack">
+          <div class="form-grid">
+            <label>Start<input id="hours-start" type="time" required></label>
+            <label>End<input id="hours-end" type="time" required></label>
+            <label class="f-full">Slot duration
+              <select id="slot-duration"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
+          </div>
+          <button class="btn btn-primary" type="submit">Save working hours</button>
+          <div id="hours-message" class="hidden"></div>
+        </form>
+      </section>
+
+      <!-- Block time -->
+      <section class="card reveal" style="margin:0">
+        <div class="card-head"><div class="card-title"><span class="icon-badge is-danger"><svg class="i"><use href="#i-ban"/></svg></span>
+          <div><h2>Block time</h2><p>Prevent booking during leave, rounds, or other commitments.</p></div></div></div>
+        <form id="block-form" class="stack">
+          <div class="form-grid">
+            <label>Starts<input id="block-start" type="datetime-local" required></label>
+            <label>Ends<input id="block-end" type="datetime-local" required></label>
+            <label class="f-full">Reason <input id="block-reason" placeholder="Optional"></label>
+          </div>
+          <button class="btn btn-primary" type="submit">Block time</button>
+          <div id="block-message" class="hidden"></div>
+        </form>
+        <div id="blocked-list" class="stack" style="margin-top:1.1rem"></div>
+      </section>
     </div>
-</div>
+  </div>
+
+</main>
+
+<script src="/clinic.js"></script>
+<script th:inline="javascript">window.PAGE = { doctorId: /*[[${doctorId}]]*/ 0 };</script>
+<script>
+const doctorId = PAGE.doctorId, dateInput = qs("#schedule-date");
+
+/* ---- Schedule ---- */
+function apptRow(a, i) {
+  const open = a.status === "SCHEDULED";
+  return `<div class="appt anim-in" style="--i:${i}">
+    <div class="appt-time">${esc(String(a.appointmentTime).slice(0, 5))}</div>
+    <div class="appt-main">${avatar(a.patientName)}<div><strong>${esc(a.patientName)}</strong><span class="muted small">${esc(fmtDate(dateInput.value))}</span></div></div>
+    <div class="appt-actions">${statusBadge(a.status)}${open ? `
+      <button class="btn btn-sm btn-soft" data-action="complete" data-id="${a.id}">${icon("check")}Complete</button>
+      <button class="btn btn-sm" data-action="no-show" data-id="${a.id}">No-show</button>
+      <button class="btn btn-sm btn-danger" data-action="cancel" data-id="${a.id}">${icon("x")}Cancel</button>` : ""}</div></div>`;
+}
+async function loadSchedule() {
+  const list = qs("#schedule-list");
+  qs("#hero-date").textContent = fmtDate(dateInput.value);
+  list.innerHTML = skeletonRows(3);
+  try {
+    const appts = await api(`/api/appointments/doctor/${doctorId}/today?date=${dateInput.value}`);
+    qs("#hero-count").textContent = `${appts.length} appointment${appts.length === 1 ? "" : "s"}`;
+    list.innerHTML = appts.length ? appts.map(apptRow).join("") : emptyState("calendar", "A clear day", "No scheduled appointments for this date.");
+  } catch (e) {
+    qs("#hero-count").textContent = "Unavailable";
+    list.innerHTML = `<div class="notice notice-error">${icon("alert")}<span>${esc(e.message)}</span></div>`;
+  }
+}
+const shiftDay = n => { const d = new Date(dateInput.value + "T00:00"); d.setDate(d.getDate() + n); dateInput.value = d.toLocaleDateString("en-CA"); loadSchedule(); };
+qs("#prev-day").onclick = () => shiftDay(-1);
+qs("#next-day").onclick = () => shiftDay(1);
+qs("#today-btn").onclick = () => { dateInput.value = dateInput.defaultValue; loadSchedule(); };
+dateInput.addEventListener("change", loadSchedule);
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-action]"); if (!b) return;
+  const id = b.dataset.id, act = b.dataset.action;
+  try {
+    if (act === "cancel") {
+      if (!await confirmAction("The patient will be notified that this appointment was cancelled.", { title: "Cancel appointment?", confirmLabel: "Cancel appointment", cancelLabel: "Keep it", danger: true })) return;
+      await api(`/api/appointments/${id}/cancel?cancelledBy=doctor`, { method: "PUT" }); toast("Appointment cancelled.");
+    } else if (act === "complete" || act === "no-show") {
+      await api(`/api/appointments/${id}/${act}`, { method: "PUT" }); toast(act === "complete" ? "Marked as completed." : "Marked as no-show.");
+    } else if (act === "unblock") {
+      if (!await confirmAction("Patients will be able to book this time again.", { title: "Remove blocked time?", confirmLabel: "Remove" })) return;
+      await api(`/api/doctors/${doctorId}/blocked-slots/${id}`, { method: "DELETE" }); toast("Blocked time removed."); return loadBlocked();
+    } else return;
+    loadSchedule();
+  } catch (err) { toast(err.message, "error"); }
+});
+
+/* ---- Working hours ---- */
+async function loadDoctor() {
+  try {
+    const d = await api(`/api/doctors/${doctorId}`);
+    qs("#hours-start").value = d.workingHoursStart || ""; qs("#hours-end").value = d.workingHoursEnd || ""; qs("#slot-duration").value = d.slotDurationMinutes || 30;
+  } catch (e) { showMessage(qs("#hours-message"), e.message, "error"); }
+}
+qs("#hours-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = qs("#hours-message"), btn = qs("[type=submit]", e.target); setBusy(btn, true);
+  try {
+    await api(`/api/doctors/${doctorId}/working-hours?start=${qs("#hours-start").value}&end=${qs("#hours-end").value}&slotDurationMinutes=${qs("#slot-duration").value}`, { method: "PUT" });
+    hideMessage(msg); toast("Working hours saved.");
+  } catch (err) { showMessage(msg, err.message, "error"); }
+  setBusy(btn, false);
+});
+
+/* ---- Blocked time ---- */
+async function loadBlocked() {
+  const list = qs("#blocked-list");
+  try {
+    const slots = await api(`/api/doctors/${doctorId}/blocked-slots`);
+    list.innerHTML = slots.length ? slots.map((s, i) => `
+      <div class="blocked-item anim-in" style="--i:${i}">
+        <div><strong>${esc(fmtDateTime(s.startDateTime))}</strong><span class="muted"> → ${esc(fmtDateTime(s.endDateTime))}</span><br><span class="muted small">${esc(s.reason || "Blocked time")}</span></div>
+        <button class="btn btn-sm btn-danger" data-action="unblock" data-id="${s.id}">${icon("trash")}Remove</button></div>`).join("")
+      : '<span class="muted small">No blocked time recorded.</span>';
+  } catch (e) { list.innerHTML = `<div class="notice notice-error">${icon("alert")}<span>${esc(e.message)}</span></div>`; }
+}
+qs("#block-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = qs("#block-message"), btn = qs("[type=submit]", e.target), start = qs("#block-start").value, end = qs("#block-end").value;
+  setBusy(btn, true); hideMessage(msg);
+  try {
+    const conflicts = await api(`/api/doctors/${doctorId}/blocked-slots/conflicts?startDateTime=${encodeURIComponent(start)}&endDateTime=${encodeURIComponent(end)}`);
+    const warning = conflicts.length
+      ? `This block overlaps ${conflicts.length} scheduled appointment(s):\n${conflicts.map(a => `• ${a.appointmentDate} ${a.appointmentTime} — ${a.patientName}`).join("\n")}\n\nContinue anyway?`
+      : "Patients will no longer be able to book this time.";
+    if (!await confirmAction(warning, { title: "Block this time?", confirmLabel: "Block time", danger: conflicts.length > 0 })) { setBusy(btn, false); return; }
+    await api(`/api/doctors/${doctorId}/blocked-slots`, { method: "POST", body: JSON.stringify({ startDateTime: start, endDateTime: end, reason: qs("#block-reason").value }) });
+    toast("Time blocked."); e.target.reset(); loadBlocked();
+  } catch (err) { showMessage(msg, err.message, "error"); }
+  setBusy(btn, false);
+});
+
+loadDoctor(); loadSchedule(); loadBlocked();
+</script>
 </body>
 </html>

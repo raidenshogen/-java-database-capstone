@@ -75,7 +75,7 @@ CREATE TABLE doctors (
     last_name               VARCHAR(100) NOT NULL,
     email                   VARCHAR(150) NOT NULL UNIQUE,
     password_hash           VARCHAR(255) NOT NULL,
-    specialty_id            INT NOT NULL,
+    specialty_id            BIGINT NOT NULL,
     working_hours_start     TIME NOT NULL DEFAULT '09:00:00',
     working_hours_end       TIME NOT NULL DEFAULT '17:00:00',
     slot_duration_minutes   INT NOT NULL DEFAULT 30,

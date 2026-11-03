@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * Repository for {@link Patient} accounts.
@@ -31,4 +32,12 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
      */
     @Query("SELECT p FROM Patient p WHERE p.email = :email OR p.phone = :phone")
     Optional<Patient> findByEmailOrPhone(@Param("email") String email, @Param("phone") String phone);
+
+    @Query("""
+        SELECT p.assignedDoctorId, COUNT(p)
+        FROM Patient p
+        WHERE p.isActive = true AND p.assignedDoctorId IS NOT NULL
+        GROUP BY p.assignedDoctorId
+    """)
+    List<Object[]> countActivePatientsByDoctor();
 }

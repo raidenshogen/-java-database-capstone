@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('My patients')}"></head>
+<body>
+<svg th:replace="~{fragments :: icons}"></svg>
+<header th:replace="~{fragments :: topbar('Doctor')}"></header>
+
+<main class="container">
+  <section class="hero reveal">
+    <div>
+      <div class="eyebrow"><i class="live-dot"></i>Assigned care</div>
+      <h1>Your patients</h1>
+      <p class="lede">Open a patient to review their contact details, appointment history, current statuses, and prescriptions.</p>
+    </div>
+    <svg th:replace="~{fragments :: ecg}"></svg>
+  </section>
+
+  <section class="card reveal">
+    <div class="card-head">
+      <div class="card-title"><span class="icon-badge"><svg class="i"><use href="#i-users"/></svg></span>
+        <div><h2>Patient list</h2><p id="patient-count">Loading assigned patients…</p></div></div>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><input id="patient-search" placeholder="Search patients…" aria-label="Search patients"></div>
+    </div>
+    <div id="patient-message" class="hidden"></div>
+    <div id="patient-list" class="stack"><span class="skeleton sk-row"></span><span class="skeleton sk-row"></span><span class="skeleton sk-row"></span></div>
+  </section>
+</main>
+
+<script src="/clinic.js"></script>
+<script th:inline="javascript">window.PAGE = { doctorId: /*[[${doctorId}]]*/ 0 };</script>
+<script>
+const doctorId = PAGE.doctorId, list = qs("#patient-list"), search = qs("#patient-search"), count = qs("#patient-count");
+let patients = []; const rxCache = {};
+
+const medRow = () => `<div class="med-row">
+  <input name="medName" placeholder="Medicine name" required><input name="medDosage" placeholder="Dosage" required><input name="medDuration" placeholder="Duration" required>
+  <button type="button" class="btn btn-icon btn-ghost" data-action="remove-med" title="Remove medicine" aria-label="Remove medicine">${icon("x")}</button></div>`;
+
+function patientCard(p, i) {
+  const name = `${p.firstName} ${p.lastName}`;
+  return `<article class="patient-card anim-in" style="--i:${Math.min(i, 10)}" data-id="${p.id}">
+    <header class="patient-head">${avatar(name, "lg")}
+      <div class="patient-meta"><h3>${esc(name)}</h3><p>${esc(p.email)} · ${esc(p.phone)}${p.dateOfBirth ? ` · Born ${esc(p.dateOfBirth)}` : ""}</p></div>
+      <button class="btn btn-soft btn-sm" data-action="toggle" data-id="${p.id}" aria-expanded="false"><span>View details</span>${icon("chevron", "chev")}</button>
+    </header>
+    <div class="collapse"><div>
+      <div class="detail-grid">
+        <div><h4>Appointments</h4><div id="appointments-${p.id}" class="stack"></div></div>
+        <div><h4>Prescriptions</h4><div id="prescriptions-${p.id}" class="stack"></div></div>
+      </div>
+      <form class="rx-form stack" data-id="${p.id}">
+        <h3>${icon("pill")} New prescription</h3>
+        <div class="form-grid">
+          <label class="f-full">Appointment<select name="appointmentId" id="prescription-appointment-${p.id}" required><option value="">Choose an appointment</option></select></label>
+          <label class="f-full">Diagnosis<input name="diagnosis" placeholder="Diagnosis" required></label>
+        </div>
+        <div class="stack med-rows"><h4>Medicines</h4>${medRow()}</div>
+        <div><button type="button" class="btn btn-sm btn-soft" data-action="add-med">${icon("plus")}Add medicine</button></div>
+        <label>Clinical notes<textarea name="note" placeholder="Clinical notes"></textarea></label>
+        <div><button class="btn btn-primary" type="submit">${icon("check")}Save prescription</button></div>
+        <div class="hidden" data-msg></div>
+      </form>
+    </div></div></article>`;
+}
+
+function renderPatients() {
+  const q = search.value.trim().toLowerCase();
+  const filtered = patients.filter(p => `${p.firstName} ${p.lastName} ${p.email}`.toLowerCase().includes(q));
+  count.textContent = `${filtered.length} assigned patient${filtered.length === 1 ? "" : "s"}`;
+  // keep open cards stable while searching: simple re-render
+  list.innerHTML = filtered.length ? filtered.map(patientCard).join("") : emptyState("search", "No patients found", "No assigned patients match your search.");
+}
+async function loadPatients() {
+  try { patients = await api(`/api/patients/doctor/${doctorId}`); renderPatients(); }
+  catch (e) { list.innerHTML = ""; showMessage(qs("#patient-message"), e.message, "error"); count.textContent = "Unavailable"; }
+}
+
+async function loadDetails(id) {
+  const apptBox = qs(`#appointments-${id}`), rxBox = qs(`#prescriptions-${id}`);
+  apptBox.innerHTML = skeletonRows(2); rxBox.innerHTML = skeletonRows(2);
+  try {
+    const [appts, rxs] = await Promise.all([api(`/api/appointments/patient/${id}`), api(`/api/prescriptions/patient/${id}`)]);
+    apptBox.innerHTML = appts.length ? appts.map((a, i) => `<div class="mini" style="--i:${i}">
+        <div class="mini-head"><strong>${esc(a.appointmentDate)} · ${esc(String(a.appointmentTime).slice(0, 5))}</strong>${statusBadge(a.status)}</div>
+        <span class="muted small">${esc(a.doctorName)}</span></div>`).join("") : '<span class="muted small">No appointments.</span>';
+    rxBox.innerHTML = rxs.length ? rxs.map((p, i) => { rxCache[p.id] = p; const mine = p.doctorId === doctorId; return `<div class="mini rx" style="--i:${i}">
+        <div class="mini-head"><div><strong>${esc(p.diagnosis || "Prescription")}</strong><br><span class="muted small">${esc(fmtDateTime(p.createdAt))}</span></div>
+          ${mine ? `<div class="row" style="gap:.3rem"><button class="btn btn-icon btn-sm btn-soft" data-action="edit-rx" data-id="${esc(p.id)}" title="Edit" aria-label="Edit prescription">${icon("edit")}</button>
+          <button class="btn btn-icon btn-sm btn-danger" data-action="delete-rx" data-id="${esc(p.id)}" data-patient="${id}" title="Delete" aria-label="Delete prescription">${icon("trash")}</button></div>` : ""}</div>
+        ${p.note ? `<p class="small" style="margin-top:.4rem">${esc(p.note)}</p>` : ""}
+        <ul class="pills">${(p.medicines || []).map(m => `<li class="pill">${esc(m.name)} · ${esc(m.dosage)}${m.duration ? " · " + esc(m.duration) : ""}</li>`).join("")}</ul></div>`; }).join("")
+      : '<span class="muted small">No prescriptions yet.</span>';
+    qs(`#prescription-appointment-${id}`).innerHTML = '<option value="">Choose an appointment</option>' +
+      appts.map(a => `<option value="${a.id}">${esc(a.appointmentDate)} ${esc(String(a.appointmentTime).slice(0, 5))} — ${esc(String(a.status).replace("_", " "))}</option>`).join("");
+  } catch (e) {
+    qs(`#details-${id}`)?.remove();
+    apptBox.innerHTML = `<div class="notice notice-error">${icon("alert")}<span>${esc(e.message)}</span></div>`; rxBox.innerHTML = "";
+    apptBox.closest(".patient-card").dataset.loaded = "";
+  }
+}
+
+/* ---- Click delegation ---- */
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-action]"); if (!b) return;
+  const act = b.dataset.action;
+  if (act === "toggle") {
+    const card = b.closest(".patient-card"), open = !card.classList.contains("open");
+    card.classList.toggle("open", open); b.setAttribute("aria-expanded", open);
+    qs("span", b).textContent = open ? "Hide details" : "View details";
+    if (open && !card.dataset.loaded) { card.dataset.loaded = "1"; loadDetails(card.dataset.id); }
+  } else if (act === "add-med") {
+    qs(".med-rows", b.closest("form")).insertAdjacentHTML("beforeend", medRow());
+  } else if (act === "remove-med") {
+    const row = b.closest(".med-row"), rows = qsa(".med-row", row.parentElement);
+    if (rows.length === 1) qsa("input", row).forEach(i => i.value = "");
+    else { row.classList.add("removing"); setTimeout(() => row.remove(), 190); }
+  } else if (act === "delete-rx") {
+    if (!await confirmAction("This prescription will be permanently removed from the patient's record.", { title: "Delete prescription?", confirmLabel: "Delete", danger: true })) return;
+    try { await api(`/api/prescriptions/${b.dataset.id}`, { method: "DELETE" }); toast("Prescription deleted."); loadDetails(b.dataset.patient); }
+    catch (err) { toast(err.message, "error"); }
+  } else if (act === "edit-rx") {
+    const p = rxCache[b.dataset.id]; if (!p) return;
+    modalForm({ title: "Edit prescription", subtitle: p.diagnosis || "", icon: "pill", submitLabel: "Save changes",
+      fields: [{ name: "diagnosis", label: "Diagnosis", value: p.diagnosis || "", required: true }, { name: "note", label: "Clinical notes", type: "textarea", value: p.note || "" }],
+      async onSubmit(v) {
+        await api(`/api/prescriptions/${p.id}`, { method: "PUT", body: JSON.stringify({ appointmentId: p.appointmentId, patientId: p.patientId, diagnosis: v.diagnosis, note: v.note, medicines: p.medicines || [] }) });
+        toast("Prescription updated."); loadDetails(p.patientId);
+      } });
+  }
+});
+
+/* ---- Create prescription (bound once, via delegation) ---- */
+document.addEventListener("submit", async e => {
+  const form = e.target.closest(".rx-form"); if (!form) return;
+  e.preventDefault();
+  const id = Number(form.dataset.id), msg = qs("[data-msg]", form), btn = qs("[type=submit]", form), f = form.elements;
+  const medicines = qsa(".med-row", form).map(r => ({ name: qs("[name=medName]", r).value.trim(), dosage: qs("[name=medDosage]", r).value.trim(), duration: qs("[name=medDuration]", r).value.trim() }));
+  setBusy(btn, true); hideMessage(msg);
+  try {
+    await api("/api/prescriptions", { method: "POST", body: JSON.stringify({ appointmentId: Number(f.appointmentId.value), patientId: id, diagnosis: f.diagnosis.value, note: f.note.value, medicines }) });
+    toast("Prescription saved."); form.reset();
+    qsa(".med-row", form).slice(1).forEach(r => r.remove());
+    loadDetails(id);
+  } catch (err) { showMessage(msg, err.message, "error"); }
+  setBusy(btn, false);
+});
+
+search.addEventListener("input", renderPatients);
+loadPatients();
+</script>
+</body>
+</html>

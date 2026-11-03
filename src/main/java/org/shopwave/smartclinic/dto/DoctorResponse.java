@@ -1,5 +1,7 @@
 package org.shopwave.smartclinic.dto;
 
+import java.time.LocalTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +20,10 @@ public class DoctorResponse {
     private String firstName;
     private String lastName;
     private String email;
+    private Long specialtyId;
     private String specialtyName;
     private Integer slotDurationMinutes;
+    private LocalTime workingHoursStart;
+    private LocalTime workingHoursEnd;
     private boolean active;
 }
